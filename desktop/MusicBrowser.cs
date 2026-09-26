@@ -8,7 +8,7 @@ public sealed record PlayerState(double Duration, double Elapsed, bool Done, str
 public sealed record ScrollState(bool Bottom, double Position);
 public sealed record PageChange(bool Changed, string Error);
 
-public sealed class MusicBrowser : IAsyncDisposable
+public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
 {
     public MusicSite Site { get; private set; } = MusicSite.Udio;
     private IPlaywright? playwright;

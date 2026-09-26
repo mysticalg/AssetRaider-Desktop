@@ -25,7 +25,7 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "AssetRaider 0.3.0 — Udio + Suno WAV Recorder";
+        Text = "AssetRaider 0.3.1 — Udio + Suno WAV Recorder";
         MinimumSize = new Size(820, 600); Size = new Size(1100, 790);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10);
@@ -90,8 +90,9 @@ public sealed class MainForm : Form
         grid.CellValueChanged += (_, _) => UpdateCount();
         layout.Controls.Add(grid);
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(0, 7, 0, 0) };
-        var record = MakeButton("3  Record selected as WAV", () => Work(Record));
+        var record = MakeButton("3  Record selected as WAV", () => Work(token => Record(token, false)));
         record.BackColor = Color.FromArgb(47, 75, 190); record.ForeColor = Color.White; actions.Controls.Add(record);
+        actions.Controls.Add(MakeButton("Record again (new copy)", () => Work(token => Record(token, true))));
         stop.Text = "Stop"; stop.AutoSize = true; stop.Height = 34; stop.Enabled = false;
         stop.Click += (_, _) => { cancellation?.Cancel(); SetStatus("Stopping… any unfinished recording will be kept as a partial WAV."); };
         actions.Controls.Add(stop);
@@ -149,22 +150,24 @@ public sealed class MainForm : Form
         }, token);
         SetStatus(result);
     }
-    private async Task Record(CancellationToken token)
+    private async Task Record(CancellationToken token, bool recordAgain)
     {
         grid.EndEdit();
         var selected = tracks.Where(t => t.Selected).ToArray();
         if (selected.Length == 0) { SetStatus("Select one or more songs first, or click Select all."); return; }
         Directory.CreateDirectory(MusicBrowser.AppData);
         File.WriteAllText(SettingsPath, JsonSerializer.Serialize(folder.Text));
+        if (recordAgain) SetStatus("Recording fresh copies of every selected track. Existing WAVs will be kept.");
         SetStatus($"Recording {selected.Length} selected songs. Keep the app’s Chrome window open; avoid other playback in that window. You can use your usual browser separately.");
         await new RecorderQueue(browser).RunAsync(selected, folder.Text, (track, message, fraction) => {
             var terminal = message.StartsWith("Saved") || message.StartsWith("Failed") || message.StartsWith("Already") || message.StartsWith("Stopped");
             track.Status = message; tracks.ResetItem(tracks.IndexOf(track));
             progress.Value = (int)(fraction * 100); status.Text = $"{track.Title} — {message}";
             if (terminal) log.AppendText($"{DateTime.Now:HH:mm:ss}  {track.Title}: {message}{Environment.NewLine}");
-        }, token);
-        var saved = selected.Count(t => t.Status is "Saved WAV" or "Already saved");
-        SetStatus($"Queue finished: {saved}/{selected.Length} saved or already complete. {selected.Length - saved} need attention. See each track’s status.");
+        }, token, recordAgain);
+        var saved = selected.Count(t => t.Status == "Saved WAV");
+        var skipped = selected.Count(t => t.Status.StartsWith("Already saved:"));
+        SetStatus($"Queue finished: {saved} newly recorded, {skipped} skipped (existing WAV), {selected.Length - saved - skipped} need attention. See each track’s status.");
     }
     private async void OnClosing(object? sender, FormClosingEventArgs e)
     {

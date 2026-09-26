@@ -22,6 +22,7 @@ internal static class CrossCheck
             if (!scroll.Bottom || scroll.Position != 123) throw new Exception("Structured browser results did not decode.");
             foreach (var name in new[] { "player", "library", "scroll", "pagination" }) if (MusicBrowser.Script(name).Length < 30) throw new Exception("Missing browser script: " + name);
             using (var driver = Playwright.CreateAsync().GetAwaiter().GetResult()) { }
+            RecordingPolicyCheck.RunAsync(Path.Combine(directory, "repeat-" + Guid.NewGuid().ToString("N"))).GetAwaiter().GetResult();
             var track = new Track { Id = "ExampleTrack0001", Title = "Sample: song/unsafe?*" };
             var suno = new Track { Id = track.Id, Title = track.Title, Site = "suno" };
             var changes = 0; track.PropertyChanged += (_, _) => changes++; track.Selected = true; track.Status = "Testing";
@@ -34,7 +35,7 @@ internal static class CrossCheck
             var again = new RecordingLibrary(library.DirectoryPath); again.Load();
             if (!again.IsComplete(track) || again.IsComplete(suno) || again.Allocate(track).Final == paths.Final) throw new Exception("Resume/site isolation/non-overwrite validation failed.");
             try { RecordingLibrary.SafeName(new Track { Id = "../escape" }); throw new Exception("Traversal was accepted."); } catch (ArgumentException) { }
-            File.WriteAllText(Path.Combine(directory, "launch-check.json"), JsonSerializer.Serialize(new { Passed = true, Platform = System.Runtime.InteropServices.RuntimeInformation.OSDescription, Checks = new[] { "Manual login flags", "Local recording connection", "Audio routing configuration", "Shared browser scripts", "Native Playwright driver startup", "JSON conversion", "Selection/status notifications", "Portable filenames", "WAV format and resume", "Site isolation", "Non-overwrite and traversal rejection" } }, new JsonSerializerOptions { WriteIndented = true }));
+            File.WriteAllText(Path.Combine(directory, "launch-check.json"), JsonSerializer.Serialize(new { Passed = true, Platform = System.Runtime.InteropServices.RuntimeInformation.OSDescription, Checks = new[] { "Manual login flags", "Local recording connection", "Audio routing configuration", "Shared browser scripts", "Native Playwright driver startup", "JSON conversion", "Selection/status notifications", "Portable filenames", "WAV format and resume", "Site isolation", "Non-overwrite and traversal rejection", "Repeat recording, renamed tracks, failed retries, damaged/missing files and cancellation" } }, new JsonSerializerOptions { WriteIndented = true }));
             return 0;
         }
         catch (Exception ex) { File.WriteAllText(Path.Combine(directory, "launch-check.json"), ex.ToString()); return 1; }

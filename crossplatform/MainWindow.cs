@@ -31,7 +31,7 @@ public sealed class MainWindow : Window
 
     public MainWindow()
     {
-        Title = "AssetRaider 0.4.0 beta — Udio + Suno to WAV"; Width = 1080; Height = 800; MinWidth = 850; MinHeight = 650;
+        Title = "AssetRaider 0.4.1 beta — Udio + Suno to WAV"; Width = 1080; Height = 800; MinWidth = 850; MinHeight = 650;
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto"), Margin = new Thickness(24), RowSpacing = 12 };
         void Row(Control control, int row) { Grid.SetRow(control, row); root.Children.Add(control); }
         Row(new TextBlock { Text = "AssetRaider / Udio + Suno to WAV", FontSize = 26, FontWeight = FontWeight.Bold }, 0);
@@ -71,7 +71,8 @@ public sealed class MainWindow : Window
             return row;
         }); Row(list, 4);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-        actions.Children.Add(Button("Record selected as WAV", () => Work(Record))); actions.Children.Add(stop);
+        actions.Children.Add(Button("Record selected as WAV", () => Work(token => Record(token, false))));
+        actions.Children.Add(Button("Record again (new copy)", () => Work(token => Record(token, true)))); actions.Children.Add(stop);
         stop.Click += (_, _) => { cancellation?.Cancel(); SetStatus("Stopping… unfinished recordings remain partial."); }; Row(actions, 5);
         Row(status, 6); Row(progress, 7); Row(log, 8); Content = root;
         SetStatus(OperatingSystem.IsMacOS() ? "First recording: macOS will request Screen & System Audio Recording permission. Only audio from the dedicated Chrome app is requested. Keep the Mac awake during recording." : "Linux: requires PulseAudio or PipeWire-Pulse and pulseaudio-utils. The dedicated Chrome audio goes to a silent recording channel. Keep the computer awake during recording.");
@@ -109,17 +110,20 @@ public sealed class MainWindow : Window
             UpdateCount(); status.Text = $"Loading… {tracks.Count} tracks found";
         }, token));
     }
-    private async Task Record(CancellationToken token)
+    private async Task Record(CancellationToken token, bool recordAgain)
     {
         var selected = tracks.Where(t => t.Selected).ToArray();
         if (selected.Length == 0) { SetStatus("Choose at least one track, or Select all."); return; }
         Directory.CreateDirectory(MusicBrowser.AppData); File.WriteAllText(SettingsPath, JsonSerializer.Serialize(folder.Text));
+        if (recordAgain) SetStatus("Recording fresh copies of every selected track. Existing WAVs will be kept.");
         SetStatus($"Recording {selected.Length} tracks. Keep the dedicated Chrome window open and the computer awake.");
         await new RecorderQueue(browser).RunAsync(selected, folder.Text ?? "", (track, message, fraction) => {
             track.Status = message; progress.Value = fraction * 100; status.Text = track.Title + " — " + message;
             if (message.StartsWith("Saved") || message.StartsWith("Failed") || message.StartsWith("Already")) SetStatus(status.Text);
-        }, token);
-        var saved = selected.Count(t => t.Status is "Saved WAV" or "Already saved"); SetStatus($"Queue finished: {saved}/{selected.Length} saved or already complete; {selected.Length - saved} need attention.");
+        }, token, recordAgain);
+        var saved = selected.Count(t => t.Status == "Saved WAV");
+        var skipped = selected.Count(t => t.Status.StartsWith("Already saved:"));
+        SetStatus($"Queue finished: {saved} newly recorded, {skipped} skipped (existing WAV), {selected.Length - saved - skipped} need attention.");
     }
     private async void OnClosing(object? sender, WindowClosingEventArgs e)
     {

@@ -40,17 +40,18 @@ public sealed class RecordingLibrary(string directory)
             entries.Remove(pair.Key);
         }
     }
-    public bool IsComplete(Track track)
+    public bool IsComplete(Track track) => CompletedPath(track) != null;
+    public string? CompletedPath(Track track)
     {
-        if (!entries.TryGetValue(track.Key, out var entry) || Path.GetFileName(entry.FileName) != entry.FileName) return false;
+        if (!entries.TryGetValue(track.Key, out var entry) || Path.GetFileName(entry.FileName) != entry.FileName) return null;
         var path = Path.Combine(DirectoryPath, entry.FileName);
         try
         {
-            if (new FileInfo(path).Length != entry.Bytes) return false;
+            if (new FileInfo(path).Length != entry.Bytes) return null;
             using var reader = new WaveFileReader(path);
-            return reader.TotalTime.TotalSeconds >= entry.Seconds - .1 && reader.Length > 0;
+            return reader.TotalTime.TotalSeconds >= entry.Seconds - .1 && reader.Length > 0 ? path : null;
         }
-        catch { return false; }
+        catch { return null; }
     }
     public static string SafeName(Track track)
     {

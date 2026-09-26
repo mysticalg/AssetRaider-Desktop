@@ -1,12 +1,14 @@
-# AssetRaider 0.4.0 — macOS and Linux beta
+# AssetRaider 0.4.1 — macOS and Linux beta
+
+**New in 0.4.1:** click **Record again (new copy)** to re-record selected tracks even when older WAVs are remembered. Existing files are preserved. Skips show the actual saved path, and summaries distinguish new recordings from skipped files. Shared queue regression checks cover both Udio and Suno, including renamed songs, missing/damaged files, failed retries and cancellation.
 
 AssetRaider now has desktop builds for **Apple Silicon Macs, Intel Macs, and Linux x86-64**, sharing the Udio/Suno library scanning, track selection, Select all and WAV queue with the Windows edition.
 
 | Download | Requirements |
 | --- | --- |
-| `AssetRaider-0.4.0-osx-arm64.zip` | Apple Silicon, macOS 14+, Google Chrome |
-| `AssetRaider-0.4.0-osx-x64.zip` | Intel Mac, macOS 14+, Google Chrome |
-| `AssetRaider-0.4.0-linux-x64.tar.gz` | Ubuntu 22.04+ or comparable x86-64 desktop, native Google Chrome, PulseAudio/PipeWire-Pulse and pulseaudio-utils |
+| `AssetRaider-0.4.1-osx-arm64.zip` | Apple Silicon, macOS 14+, Google Chrome |
+| `AssetRaider-0.4.1-osx-x64.zip` | Intel Mac, macOS 14+, Google Chrome |
+| `AssetRaider-0.4.1-linux-x64.tar.gz` | Ubuntu 22.04+ or comparable x86-64 desktop, native Google Chrome, PulseAudio/PipeWire-Pulse and pulseaudio-utils |
 
 **Mac:** extract the ZIP, move AssetRaider.app to Applications. Grant Screen & System Audio Recording permission when requested. The helper requests audio only from the dedicated Chrome application, not microphone audio or saved screen video. These beta builds are ad-hoc signed, **not Apple Developer ID signed or notarized**; macOS may block opening downloaded apps.
 

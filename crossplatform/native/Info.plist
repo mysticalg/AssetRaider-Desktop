@@ -5,8 +5,8 @@
   <key>CFBundleIdentifier</key><string>io.github.mysticalg.assetraider</string>
   <key>CFBundleName</key><string>AssetRaider</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleVersion</key><string>0.4.0</string>
-  <key>CFBundleShortVersionString</key><string>0.4.0</string>
+  <key>CFBundleVersion</key><string>0.4.1</string>
+  <key>CFBundleShortVersionString</key><string>0.4.1</string>
   <key>LSMinimumSystemVersion</key><string>14.0</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSAudioCaptureUsageDescription</key><string>Record audio from AssetRaider's dedicated Chrome window into local WAV files.</string>

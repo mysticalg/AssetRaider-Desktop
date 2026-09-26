@@ -1,6 +1,11 @@
-# AssetRaider Desktop 0.3.0 — public beta
+# AssetRaider Desktop 0.3.1 — record again
 
 Choose Udio or Suno tracks and record normal playback into separate local WAV files.
+
+- **Record again (new copy)** records every selected track even when a previous recording is remembered. Existing WAVs and partial recordings are preserved.
+- Skipped tracks now show the existing file's full path, including when the song has since been renamed.
+- Queue summaries separate newly recorded tracks from skipped existing files.
+- Regression checks cover repeat playback attempts, renamed songs, preserving older copies after failure, numbered filenames, cancellation, and retrying missing/damaged files on both services.
 
 - Windows installer with Start menu shortcut and Installed apps entry, plus a portable ZIP.
 - Track selection and Select all for the loaded library/workspace.

@@ -3,10 +3,20 @@ using System.Runtime.InteropServices;
 
 namespace AssetRaider.Desktop;
 
-public sealed class RecorderQueue(MusicBrowser browser)
+public interface IRecordingBrowser
+{
+    MusicSite Site { get; }
+    int ProcessId { get; }
+    Task<double> PrepareAsync(Track track, CancellationToken cancellation);
+    Task StartAsync();
+    Task<PlayerState> StateAsync();
+    Task StopAsync();
+}
+
+public sealed class RecorderQueue(IRecordingBrowser browser)
 {
     [DllImport("kernel32.dll")] private static extern uint SetThreadExecutionState(uint flags);
-    public async Task RunAsync(Track[] tracks, string directory, Action<Track, string, double> update, CancellationToken cancellation)
+    public async Task RunAsync(Track[] tracks, string directory, Action<Track, string, double> update, CancellationToken cancellation, bool recordAgain = false)
     {
         var library = new RecordingLibrary(directory);
         library.Load();
@@ -17,7 +27,11 @@ public sealed class RecorderQueue(MusicBrowser browser)
             foreach (var track in tracks)
             {
                 cancellation.ThrowIfCancellationRequested();
-                if (library.IsComplete(track)) { update(track, "Already saved", 1); continue; }
+                if (!recordAgain && library.CompletedPath(track) is { } savedPath)
+                {
+                    update(track, "Already saved: " + savedPath + " — use Record again (new copy) to re-record.", 1);
+                    continue;
+                }
                 try
                 {
                     update(track, "Preparing playback…", 0);

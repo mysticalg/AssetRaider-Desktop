@@ -93,7 +93,7 @@ internal static class InstallCore
             var helper = Path.Combine(InstallerHome, "AssetRaider.Setup.exe");
             if (!string.Equals(Environment.ProcessPath, helper, StringComparison.OrdinalIgnoreCase)) File.Copy(Environment.ProcessPath!, helper, true);
             using var key = Registry.CurrentUser.CreateSubKey(UninstallKey);
-            key.SetValue("DisplayName", "AssetRaider Desktop"); key.SetValue("DisplayVersion", "0.3.0 beta");
+            key.SetValue("DisplayName", "AssetRaider Desktop"); key.SetValue("DisplayVersion", "0.3.1 beta");
             key.SetValue("Publisher", "mysticalg"); key.SetValue("InstallLocation", Target);
             key.SetValue("DisplayIcon", Path.Combine(Target, "AssetRaider.exe"));
             key.SetValue("UninstallString", $"\"{helper}\" --uninstall");
@@ -145,7 +145,7 @@ internal sealed class SetupForm : Form
         var heading = new Label { Text = "AssetRaider", Font = new Font("Segoe UI", 25, FontStyle.Bold), Location = new Point(28, 24), AutoSize = true };
         var detail = new Label { Location = new Point(30, 88), Size = new Size(535, 118), Text = uninstall ?
             "Remove the installed desktop app and its Start menu shortcut.\n\nYour saved recordings and browser sign-ins will be kept." :
-            "Udio + Suno playback to WAV · Version 0.3.0 public beta\n\nInstalls for your Windows account. No administrator access needed.\nRequires Windows 11 x64 and Google Chrome.\nThis beta has not completed full signed-in site testing." };
+            "Udio + Suno playback to WAV · Version 0.3.1 public beta\n\nInstalls for your Windows account. No administrator access needed.\nRequires Windows 11 x64 and Google Chrome.\nThis beta has not completed full signed-in site testing." };
         var location = new Label { Text = "Location: " + InstallCore.Target, Location = new Point(30, 210), Size = new Size(535, 45) };
         var status = new Label { Location = new Point(30, 263), Size = new Size(535, 40) };
         var action = new Button { Text = uninstall ? "Uninstall" : "Install", Location = new Point(438, 310), Size = new Size(130, 34), BackColor = Color.FromArgb(68, 60, 195), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };

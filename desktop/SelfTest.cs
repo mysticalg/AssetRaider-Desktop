@@ -24,7 +24,8 @@ public static class SelfTest
             if (!scroll.Bottom || scroll.Position != 420 || songs[0].Site != "suno" || player.Elapsed != 2.5) throw new Exception("Page JSON conversion failed.");
             if (!songs[0].Url.StartsWith("https://suno.com/song/") || MusicSite.Suno.OwnsUrl("https://suno.com.evil.test/create")) throw new Exception("Site isolation failed.");
             CheckResume(Path.Combine(directory, "resume-" + Guid.NewGuid().ToString("N")));
-            File.WriteAllText(Path.Combine(directory, "launch-check.json"), JsonSerializer.Serialize(new { Passed = true, LoginArguments = login, RecordingArguments = recording, SunoArguments = suno, StructuredResults = "Scroll, track list and playback state decoded successfully", Resume = "Legacy Udio completion list migrated; identical song IDs remain separate across sites" }, new JsonSerializerOptions { WriteIndented = true }));
+            RecordingPolicyCheck.RunAsync(Path.Combine(directory, "repeat-" + Guid.NewGuid().ToString("N"))).GetAwaiter().GetResult();
+            File.WriteAllText(Path.Combine(directory, "launch-check.json"), JsonSerializer.Serialize(new { Passed = true, LoginArguments = login, RecordingArguments = recording, SunoArguments = suno, StructuredResults = "Scroll, track list and playback state decoded successfully", Resume = "Legacy Udio completion list migrated; identical song IDs remain separate across sites", RepeatRecording = "Both sites: resume path, renamed tracks, explicit repeat, failed retry preservation, numbered copies, missing/damaged files, cancellation" }, new JsonSerializerOptions { WriteIndented = true }));
             return 0;
         }
         catch (Exception ex) { File.WriteAllText(Path.Combine(directory, "launch-check.json"), ex.ToString()); return 1; }
