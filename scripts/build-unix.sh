@@ -20,8 +20,15 @@ if [[ "$rid" == osx-* ]]; then
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
   cp -a "$out/publish/." "$app/Contents/MacOS/"
   cp crossplatform/native/Info.plist "$app/Contents/Info.plist"
+  # Browser-driver assets are resources, not a nested executable bundle.
+  mv "$app/Contents/MacOS/.playwright" "$app/Contents/Resources/playwright"
+  ln -s ../Resources/playwright "$app/Contents/MacOS/.playwright"
   # Ad-hoc signatures permit local execution integrity checks; these are not Developer ID signatures or notarization.
-  codesign --force --deep --sign - "$app"
+  while IFS= read -r -d '' binary; do
+    if file -b "$binary" | grep -q 'Mach-O'; then codesign --force --sign - "$binary"; fi
+  done < <(find "$app" -type f -print0)
+  codesign --force --sign - "$app"
+  codesign --verify --deep --strict "$app"
   "$app/Contents/MacOS/AssetRaider.Audio" --check
   "$app/Contents/MacOS/AssetRaider" --launch-check "$out/checks"
   ditto -c -k --sequesterRsrc --keepParent "$app" "output/releases/AssetRaider-0.4.0-$rid.zip"
