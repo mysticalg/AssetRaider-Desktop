@@ -1,0 +1,34 @@
+name: Windows build and checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: npm ci
+      - run: npm test
+      - run: ./scripts/build-release.ps1
+      - name: Verify installer payload and app
+        shell: pwsh
+        run: |
+          $report = Join-Path $env:RUNNER_TEMP 'installer-check.json'
+          $check = Start-Process ./output/releases/AssetRaider-0.3.0-Setup.exe -ArgumentList '--verify-install', ('"' + $report + '"') -Wait -PassThru
+          Get-Content $report
+          if ($check.ExitCode -ne 0) { throw 'Installer checks failed.' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-downloads
+          path: output/releases/*
