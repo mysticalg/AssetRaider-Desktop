@@ -23,8 +23,10 @@ if [[ "$rid" == osx-* ]]; then
   cp -a "$out/publish/." "$app/Contents/MacOS/"
   cp crossplatform/native/Info.plist "$app/Contents/Info.plist"
   # Browser-driver assets are resources, not a nested executable bundle.
-  mv "$app/Contents/MacOS/.playwright" "$app/Contents/Resources/playwright"
-  ln -s ../Resources/playwright "$app/Contents/MacOS/.playwright"
+  mv "$app/Contents/MacOS/.playwright" "$app/Contents/Resources/.playwright"
+  for resource in "$app/Contents/MacOS/"*; do
+    case "$(basename "$resource")" in AssetRaider|AssetRaider.Audio|*.dylib) ;; *) mv "$resource" "$app/Contents/Resources/" ;; esac
+  done
   # Ad-hoc signatures permit local execution integrity checks; these are not Developer ID signatures or notarization.
   while IFS= read -r -d '' binary; do
     [[ "$binary" == "$app/Contents/MacOS/AssetRaider" ]] && continue

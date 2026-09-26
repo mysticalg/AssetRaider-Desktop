@@ -12,6 +12,11 @@ internal static class Program
     [STAThread]
     public static int Main(string[] args)
     {
+        if (OperatingSystem.IsMacOS())
+        {
+            var resources = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "Resources"));
+            if (Directory.Exists(Path.Combine(resources, ".playwright"))) Environment.SetEnvironmentVariable("PLAYWRIGHT_DRIVER_SEARCH_PATH", resources);
+        }
         if (args.Contains("--launch-check")) return CrossCheck.Run(args.Last());
         if (args.Contains("--audio-check")) return CrossCheck.AudioAsync(args.Last()).GetAwaiter().GetResult();
         if (args.Contains("--ui-check")) UiCheckDirectory = args.Last();
