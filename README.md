@@ -1,10 +1,18 @@
 # AssetRaider Desktop
 
-**Udio + Suno playback to WAV, on your Windows PC.** Choose tracks, select all, and record a queue into separate local audio files.
+**Udio + Suno playback to WAV, on Windows, macOS and Linux.** Choose tracks, select all, and record a queue into separate local audio files.
 
-[Download website](https://mysticalg.github.io/AssetRaider-Desktop/) · [Windows downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.0-beta.1) · [Report a problem](https://github.com/mysticalg/AssetRaider-Desktop/issues)
+[Download website](https://mysticalg.github.io/AssetRaider-Desktop/) · [Mac/Linux downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.4.0-beta.1) · [Windows downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.0-beta.1) · [Report a problem](https://github.com/mysticalg/AssetRaider-Desktop/issues)
 
-## Install
+## macOS and Linux — 0.4.0 beta
+
+- **Mac:** macOS 14+, Apple Silicon or Intel, Google Chrome. Extract the matching ZIP and move AssetRaider.app to Applications. Recording uses ScreenCaptureKit with the standard Screen & System Audio Recording permission. Builds are ad-hoc signed but **not Apple notarized**; Gatekeeper may block opening downloaded apps.
+- **Linux:** x86-64 Ubuntu 22.04+ or a comparable X11/XWayland desktop, native Google Chrome, PulseAudio/PipeWire-Pulse and `pulseaudio-utils`. Extract and launch `AssetRaider/AssetRaider`, or run `bash AssetRaider/install.sh`. Recording uses a dedicated silent sink, separate from normal desktop audio.
+- Native builds and launch/data/Playwright-driver checks run on all three targets. Linux's real audio capture and rendered interface are also checked. Interactive Mac audio permission/capture and full signed-in site queues remain unverified.
+
+See the [Mac/Linux installation and build guide](crossplatform/README.md). Keep the computer awake while recording. No separate .NET runtime is required.
+
+## Windows — 0.3.0 beta
 
 Requires **Windows 11 x64 and Google Chrome**. The .NET runtime is included.
 
