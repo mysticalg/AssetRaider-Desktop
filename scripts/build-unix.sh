@@ -5,7 +5,9 @@ rid="${1:?Usage: build-unix.sh osx-arm64|osx-x64|linux-x64}"
 case "$rid" in osx-arm64|osx-x64|linux-x64) ;; *) echo "Unsupported runtime: $rid" >&2; exit 1;; esac
 out="$PWD/output/$rid"
 mkdir -p "$out" "$PWD/output/releases"
-dotnet publish crossplatform/AssetRaider.CrossPlatform.csproj -c Release -r "$rid" --self-contained true -p:UseAppHost=true -o "$out/publish"
+publish_options=()
+if [[ "$rid" == osx-* ]]; then publish_options+=(-p:PublishSingleFile=true); fi
+dotnet publish crossplatform/AssetRaider.CrossPlatform.csproj -c Release -r "$rid" --self-contained true -p:UseAppHost=true "${publish_options[@]}" -o "$out/publish"
 cp LICENSE "$out/publish/"
 cp crossplatform/README.md "$out/publish/README.md"
 cp -R desktop/licenses "$out/publish/"
@@ -25,6 +27,7 @@ if [[ "$rid" == osx-* ]]; then
   ln -s ../Resources/playwright "$app/Contents/MacOS/.playwright"
   # Ad-hoc signatures permit local execution integrity checks; these are not Developer ID signatures or notarization.
   while IFS= read -r -d '' binary; do
+    [[ "$binary" == "$app/Contents/MacOS/AssetRaider" ]] && continue
     if file -b "$binary" | grep -q 'Mach-O'; then codesign --force --sign - "$binary"; fi
   done < <(find "$app" -type f -print0)
   codesign --force --sign - "$app"
