@@ -1,0 +1,46 @@
+name: Publish verified macOS and Linux release
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Successful macOS and Linux packages run ID
+        required: true
+        type: string
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify source build
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.run_id }}
+        shell: bash
+        run: |
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID" > source-run.json
+          jq -e '.conclusion == "success" and .head_branch == "main" and .path == ".github/workflows/unix.yml"' source-run.json
+          echo "sha=$(jq -r .head_sha source-run.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.run_id }}
+          pattern: AssetRaider-*
+          merge-multiple: true
+          path: downloads
+      - name: Publish beta downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+        shell: bash
+        run: |
+          test -s downloads/AssetRaider-0.4.0-osx-arm64.zip
+          test -s downloads/AssetRaider-0.4.0-osx-x64.zip
+          test -s downloads/AssetRaider-0.4.0-linux-x64.tar.gz
+          (cd downloads && sha256sum AssetRaider-* > SHA256SUMS.txt)
+          gh release create v0.4.0-beta.1 downloads/* --draft --prerelease --target "$SOURCE_SHA" --title 'AssetRaider 0.4.0 — macOS and Linux beta' --notes-file crossplatform/RELEASE_NOTES.md
+          gh release edit v0.4.0-beta.1 --draft=false
