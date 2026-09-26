@@ -62,7 +62,7 @@ final class AudioOutput: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked 
                   let application = content.applications.first(where: { $0.processID == pid }) else {
                 throw NSError(domain: "AssetRaider", code: 2, userInfo: [NSLocalizedDescriptionKey: "The dedicated Chrome application is not visible to macOS capture. Keep its window open and allow Screen & System Audio Recording for AssetRaider in System Settings, then restart the app."])
             }
-            let filter = SCContentFilter(display: display, includingApplications: [application], exceptingWindows: [])
+            let filter = SCContentFilter(display: display, including: [application], exceptingWindows: [])
             let config = SCStreamConfiguration()
             config.capturesAudio = true; config.excludesCurrentProcessAudio = true
             config.sampleRate = 48000; config.channelCount = 2

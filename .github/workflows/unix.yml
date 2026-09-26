@@ -32,10 +32,12 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y pulseaudio pulseaudio-utils
+          sudo apt-get install -y pulseaudio pulseaudio-utils xvfb libice6 libsm6 libfontconfig1 libgl1
           pulseaudio --start --exit-idle-time=-1
           output/linux-x64/publish/AssetRaider --audio-check output/linux-x64/audio-check
           cat output/linux-x64/audio-check/audio-check.json
+          xvfb-run -a output/linux-x64/publish/AssetRaider --ui-check output/linux-x64/ui-check
+          cat output/linux-x64/ui-check/ui-check.json
       - name: Package downloads
         uses: actions/upload-artifact@v4
         with:
@@ -49,3 +51,4 @@ jobs:
           path: |
             output/${{ matrix.rid }}/checks/launch-check.json
             output/${{ matrix.rid }}/audio-check/audio-check.json
+            output/${{ matrix.rid }}/ui-check/*

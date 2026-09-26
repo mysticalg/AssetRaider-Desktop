@@ -10,6 +10,7 @@ cp LICENSE "$out/publish/"
 cp crossplatform/README.md "$out/publish/README.md"
 cp -R desktop/licenses "$out/publish/"
 cp crossplatform/THIRD_PARTY.md "$out/publish/licenses/"
+cp crossplatform/licenses/* "$out/publish/licenses/"
 chmod +x "$out/publish/AssetRaider"
 find "$out/publish/.playwright/node" -type f -name node -exec chmod +x {} \;
 if [[ "$rid" == osx-* ]]; then
