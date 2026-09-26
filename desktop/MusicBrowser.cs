@@ -26,6 +26,12 @@ public sealed class MusicBrowser : IAsyncDisposable
     }
     private static string ChromePath()
     {
+        if (OperatingSystem.IsMacOS())
+            return new[] { "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Applications/Google Chrome.app/Contents/MacOS/Google Chrome") }.FirstOrDefault(File.Exists)
+                ?? throw new FileNotFoundException("Install Google Chrome in Applications to use the recorder.");
+        if (OperatingSystem.IsLinux())
+            return new[] { "/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/opt/google/chrome/chrome" }.FirstOrDefault(File.Exists)
+                ?? throw new FileNotFoundException("Install the native Google Chrome .deb or .rpm package. Snap/Flatpak browsers are not supported.");
         return new[] {
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"Google\Chrome\Application\chrome.exe"),
             Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @"Google\Chrome\Application\chrome.exe"),
@@ -40,6 +46,7 @@ public sealed class MusicBrowser : IAsyncDisposable
         {
             start.ArgumentList.Add("--remote-debugging-port=0");
             start.ArgumentList.Add("--remote-debugging-address=127.0.0.1");
+            PlatformAudio.ConfigureBrowser(start);
         }
         start.ArgumentList.Add("--disable-background-mode");
         start.ArgumentList.Add("--new-window");
@@ -71,6 +78,7 @@ public sealed class MusicBrowser : IAsyncDisposable
         Directory.CreateDirectory(profile);
         var portFile = Path.Combine(profile, "DevToolsActivePort");
         if (File.Exists(portFile)) File.Delete(portFile);
+        await PlatformAudio.PrepareBrowserAsync();
         process = Process.Start(LaunchOptions(ChromePath(), profile, true, Site)) ?? throw new IOException("Could not start Chrome.");
         var deadline = DateTime.UtcNow.AddSeconds(30);
         string? port = null;
@@ -182,6 +190,7 @@ public sealed class MusicBrowser : IAsyncDisposable
         if (oldPlaywright != null)
             try { await Task.Run(oldPlaywright.Dispose).WaitAsync(TimeSpan.FromSeconds(5)); } catch { }
         process?.Dispose(); process = null;
+        await PlatformAudio.ReleaseBrowserAsync();
         // Manual sign-in is owned by the user; never close it while credentials are being entered.
         loginProcess?.Dispose(); loginProcess = null;
     }

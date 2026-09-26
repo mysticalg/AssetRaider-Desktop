@@ -11,7 +11,7 @@ public sealed class RecorderQueue(MusicBrowser browser)
         var library = new RecordingLibrary(directory);
         library.Load();
         // Prevent automatic sleep while a queue is running. This call and its reset run on the UI thread.
-        SetThreadExecutionState(0x80000001);
+        if (OperatingSystem.IsWindows()) SetThreadExecutionState(0x80000001);
         try
         {
             foreach (var track in tracks)
@@ -61,6 +61,6 @@ public sealed class RecorderQueue(MusicBrowser browser)
                 finally { await browser.StopAsync(); }
             }
         }
-        finally { SetThreadExecutionState(0x80000000); }
+        finally { if (OperatingSystem.IsWindows()) SetThreadExecutionState(0x80000000); }
     }
 }

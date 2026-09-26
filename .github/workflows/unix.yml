@@ -1,0 +1,51 @@
+name: macOS and Linux packages
+on:
+  push:
+    branches: [main]
+    paths: ['crossplatform/**', 'desktop/**', 'scripts/*unix*', 'scripts/*linux*', '.github/workflows/unix.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            rid: osx-arm64
+          - os: macos-15-intel
+            rid: osx-x64
+          - os: ubuntu-22.04
+            rid: linux-x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build and verify package
+        shell: bash
+        run: bash scripts/build-unix.sh '${{ matrix.rid }}'
+      - name: Linux audio integration test
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y pulseaudio pulseaudio-utils
+          pulseaudio --start --exit-idle-time=-1
+          output/linux-x64/publish/AssetRaider --audio-check output/linux-x64/audio-check
+          cat output/linux-x64/audio-check/audio-check.json
+      - name: Package downloads
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssetRaider-${{ matrix.rid }}
+          path: output/releases/*
+      - name: Check reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checks-${{ matrix.rid }}
+          path: |
+            output/${{ matrix.rid }}/checks/launch-check.json
+            output/${{ matrix.rid }}/audio-check/audio-check.json

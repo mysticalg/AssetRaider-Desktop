@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleExecutable</key><string>AssetRaider</string>
+  <key>CFBundleIdentifier</key><string>io.github.mysticalg.assetraider</string>
+  <key>CFBundleName</key><string>AssetRaider</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleVersion</key><string>0.4.0</string>
+  <key>CFBundleShortVersionString</key><string>0.4.0</string>
+  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>NSHighResolutionCapable</key><true/>
+  <key>NSAudioCaptureUsageDescription</key><string>Record audio from AssetRaider's dedicated Chrome window into local WAV files.</string>
+  <key>NSScreenCaptureUsageDescription</key><string>AssetRaider uses ScreenCaptureKit for audio from its dedicated Chrome app. No screen video or microphone audio is saved.</string>
+</dict></plist>

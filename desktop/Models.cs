@@ -4,13 +4,16 @@ using NAudio.Wave;
 
 namespace AssetRaider.Desktop;
 
-public sealed class Track
+public sealed class Track : System.ComponentModel.INotifyPropertyChanged
 {
-    public bool Selected { get; set; }
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+    private bool selected;
+    private string status = "Ready";
+    public bool Selected { get => selected; set { selected = value; PropertyChanged?.Invoke(this, new(nameof(Selected))); } }
     public string Id { get; set; } = "";
     public string Title { get; set; } = "";
     public string Duration { get; set; } = "";
-    public string Status { get; set; } = "Ready";
+    public string Status { get => status; set { status = value; PropertyChanged?.Invoke(this, new(nameof(Status))); } }
     public string Site { get; set; } = "udio";
     public string Key => Site + ":" + Id;
     public string Url => MusicSite.FromId(Site).Id == "suno" ? "https://suno.com/song/" + Id : "https://www.udio.com/songs/" + Id;
@@ -53,7 +56,7 @@ public sealed class RecordingLibrary(string directory)
     {
         _ = MusicSite.FromId(track.Site);
         if (!Regex.IsMatch(track.Id, @"\A[a-zA-Z0-9-]{8,64}\z")) throw new ArgumentException("Invalid song ID.");
-        var title = string.Concat(track.Title.Select(c => Path.GetInvalidFileNameChars().Contains(c) || char.IsControl(c) ? '_' : c)).Trim().TrimEnd('.');
+        var title = string.Concat(track.Title.Select(c => "<>:\"/\\|?*".Contains(c) || char.IsControl(c) ? '_' : c)).Trim().TrimEnd('.');
         if (title.Length > 70) title = title[..70];
         return $"{(track.Site == "suno" ? "Suno_" : "")}{(title.Length == 0 ? "Track" : title)}__{track.Id}";
     }
