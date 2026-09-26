@@ -2,9 +2,9 @@
 
 **Udio + Suno playback to WAV, on Windows, macOS and Linux.** Choose tracks, select all, and record a queue into separate local audio files.
 
-[Download website](https://mysticalg.github.io/AssetRaider-Desktop/) · [Mac/Linux downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.4.0-beta.1) · [Windows downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.0-beta.1) · [Report a problem](https://github.com/mysticalg/AssetRaider-Desktop/issues)
+[Download website](https://mysticalg.github.io/AssetRaider-Desktop/) · [Mac/Linux downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.4.1-beta.1) · [Windows downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.1-beta.1) · [Report a problem](https://github.com/mysticalg/AssetRaider-Desktop/issues)
 
-## macOS and Linux — 0.4.0 beta
+## macOS and Linux — 0.4.1 beta
 
 - **Mac:** macOS 14+, Apple Silicon or Intel, Google Chrome. Extract the matching ZIP and move AssetRaider.app to Applications. Recording uses ScreenCaptureKit with the standard Screen & System Audio Recording permission. Builds are ad-hoc signed but **not Apple notarized**; Gatekeeper may block opening downloaded apps.
 - **Linux:** x86-64 Ubuntu 22.04+ or a comparable X11/XWayland desktop, native Google Chrome, PulseAudio/PipeWire-Pulse and `pulseaudio-utils`. Extract and launch `AssetRaider/AssetRaider`, or run `bash AssetRaider/install.sh`. Recording uses a dedicated silent sink, separate from normal desktop audio.
@@ -12,12 +12,12 @@
 
 See the [Mac/Linux installation and build guide](crossplatform/README.md). Keep the computer awake while recording. No separate .NET runtime is required.
 
-## Windows — 0.3.0 beta
+## Windows — 0.3.1 beta
 
 Requires **Windows 11 x64 and Google Chrome**. The .NET runtime is included.
 
-- **Installer:** download `AssetRaider-0.3.0-Setup.exe` from Releases, run it, then open AssetRaider from the Start menu. Installs for your Windows account without administrator access.
-- **Portable:** download `AssetRaider-0.3.0-Windows-x64.zip`, extract the entire ZIP and run `AssetRaider.exe`. Keep all extracted files together, including `.playwright`.
+- **Installer:** download `AssetRaider-0.3.1-Setup.exe` from Releases, run it, then open AssetRaider from the Start menu. Installs for your Windows account without administrator access.
+- **Portable:** download `AssetRaider-0.3.1-Windows-x64.zip`, extract the entire ZIP and run `AssetRaider.exe`. Keep all extracted files together, including `.playwright`.
 
 This is an **unsigned public beta**. Windows may display an unknown-publisher warning. Review the source or build it yourself if you prefer. SHA-256 checksums accompany each release.
 
@@ -33,7 +33,7 @@ These WAVs contain playback audio. They are not original studio masters or nativ
 
 ## Beta status
 
-Version 0.3.0 adds Suno support and fixes the Udio `Return type mismatch ... ScrollState` error by explicitly converting structured browser results. Automated player/library tests, app launch/data checks and installer extraction/removal checks pass. The native Windows audio capture self-test has also been exercised locally. **A complete signed-in recording queue on both services has not yet been verified.** Site changes, login restrictions or playback conditions may require fixes.
+Version 0.3.1 adds **Record again (new copy)**, displays existing saved paths, and separates skipped files from new recordings. It includes Suno support and fixes the Udio `Return type mismatch ... ScrollState` error by explicitly converting structured browser results. Automated player/library tests, app launch/data checks and installer extraction/removal checks pass. The native Windows audio capture self-test has also been exercised locally. **A complete signed-in recording queue on both services has not yet been verified.** Site changes, login restrictions or playback conditions may require fixes.
 
 Please include your app version, Windows version, chosen site and the error text in issue reports. Do not upload passwords, cookies, browser profile folders or private recordings.
 
@@ -51,7 +51,7 @@ Use Windows, the .NET 10 SDK, and Node.js 24 for JavaScript tests:
 npm ci
 npm test
 ./scripts/build-release.ps1
-$check = Start-Process ./output/releases/AssetRaider-0.3.0-Setup.exe -ArgumentList '--verify-install', 'C:\Temp\assetraider-installer.json' -Wait -PassThru
+$check = Start-Process ./output/releases/AssetRaider-0.3.1-Setup.exe -ArgumentList '--verify-install', 'C:\Temp\assetraider-installer.json' -Wait -PassThru
 Get-Content C:\Temp\assetraider-installer.json
 ```
 

@@ -20,4 +20,4 @@ AssetRaider now has desktop builds for **Apple Silicon Macs, Intel Macs, and Lin
 
 WAV output is 48 kHz / 16-bit stereo, at normal playback speed. It preserves playback quality, not an original master. Use audio you have permission to record. SHA256SUMS.txt covers all downloads.
 
-[Full installation guide](https://github.com/mysticalg/AssetRaider-Desktop/blob/main/crossplatform/README.md) · [Windows 0.3.0 downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.0-beta.1) · [Report an issue](https://github.com/mysticalg/AssetRaider-Desktop/issues)
+[Full installation guide](https://github.com/mysticalg/AssetRaider-Desktop/blob/main/crossplatform/README.md) · [Windows 0.3.1 downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.1-beta.1) · [Report an issue](https://github.com/mysticalg/AssetRaider-Desktop/issues)
