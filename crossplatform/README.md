@@ -4,6 +4,8 @@
 
 Click **Play** beside a scanned track to listen without saving a file. Pause, resume, replay and seek from the player bar while the dedicated Chrome window stays minimized. The spectrum shows actual captured audio, also during recording. Scanning, changing sites and recording stop preview playback first. Linux connects its private audio channel to your default speakers only while previewing. macOS needs its existing system-audio permission for the spectrum.
 
+Pressing **Play** during a running or paused scan stops scanning and plays the chosen track automatically, keeping the tracks already found. **Stopping scan…** and **Buffering…** show the transition while any browser step already in progress finishes. Playback continues to be blocked during recording.
+
 ## Source quality
 
 Each playing or recording track shows the codec, approximate stream bitrate (`~kbps`), sample rate (`kHz`) and channels reported by Chrome for its selected player. Detection starts during preparation/playback, not scanning. Unavailable fields, including bitrate, are omitted; no detected fields shows **Source quality unavailable**. Bitrate is a stream average and may include headers/container overhead; it is withheld for video/multiple-audio resources. These figures describe the playback input, independently of the 48 kHz / 16-bit stereo WAV output.

@@ -4,6 +4,8 @@
 
 Click **Play** beside a scanned track to listen without saving a file. Use the row button or player bar to pause, resume or replay; drag the seek slider to change position. The dedicated Chrome window can stay minimized. The live spectrum shows the browser's actual audio during listening and recording; it does not change the sound. Starting a scan, changing sites or recording stops the preview first. Playback controls are disabled during recording.
 
+Pressing **Play** during a running or paused scan stops scanning and plays the chosen track automatically. Tracks already found stay in the list. The app finishes any browser step already in progress before loading the song; **Stopping scan…** and **Buffering…** show that transition.
+
 ## Source quality
 
 Each playing or recording track shows the codec, approximate stream bitrate (`~kbps`), sample rate (`kHz`) and channels reported by Chrome for its selected player. Detection starts during preparation/playback, not scanning. Unavailable fields, including bitrate, are omitted; no detected fields shows **Source quality unavailable**. Bitrate is a stream average and may include headers/container overhead; it is withheld for video/multiple-audio resources. These figures describe the playback input, independently of the 48 kHz / 16-bit stereo WAV output.

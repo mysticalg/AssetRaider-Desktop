@@ -183,26 +183,39 @@ public sealed class MainWindow : Window
         catch (OperationCanceledException) { SetStatus(scanControl != null ? "Scan stopped. Tracks found are kept; Scan library starts a fresh scan." : "Stopped. Completed WAVs are saved; select remaining tracks to resume."); }
         catch (Exception ex) { SetStatus(ex.Message); }
         finally {
-            scanControl = null; pauseScan.IsEnabled = false; pauseScan.Content = "Pause scan"; clearScan.IsEnabled = !clearing; search.IsEnabled = true;
-            cancellation.Dispose(); cancellation = null; foreach (var button in idle) button.IsEnabled = true;
+            scanControl = null; pauseScan.IsEnabled = false; pauseScan.Content = "Pause scan"; clearScan.IsEnabled = !clearing && !playerBusy; search.IsEnabled = true;
+            cancellation.Dispose(); cancellation = null; foreach (var button in idle) button.IsEnabled = !playerBusy;
             resettingSite = true; site.SelectedIndex = browser.Site.Id == "suno" ? 1 : 0; resettingSite = false;
-            site.IsEnabled = folder.IsEnabled = list.IsEnabled = true; stop.IsEnabled = false;
+            folder.IsEnabled = true; site.IsEnabled = list.IsEnabled = !playerBusy; stop.IsEnabled = false;
             RefreshPlayer();
         }
     }
     private async Task PlayTrackAsync(Track track)
     {
-        if (player.Track?.Key == track.Key) { await PlayerActionAsync(() => player.ToggleAsync()); return; }
-        await PlayerActionAsync(() => player.PlayAsync(track, CancellationToken.None));
+        if (player.Track?.Key == track.Key) { await PlayerActionAsync(() => player.ToggleAsync(), track); return; }
+        await PlayerActionAsync(() => player.PlayAsync(track, CancellationToken.None), track);
     }
-    private async Task PlayerActionAsync(Func<Task> action)
+    private async Task PlayerActionAsync(Func<Task> action, Track? requestedTrack = null)
     {
-        if (closeRequested || playerBusy || clearing || operation is { IsCompleted: false }) return;
+        if (closeRequested || playerBusy || clearing || (operation is { IsCompleted: false } && (requestedTrack == null || scanControl == null))) return;
         playerBusy = true; foreach (var button in idle) button.IsEnabled = false;
         site.IsEnabled = clearScan.IsEnabled = list.IsEnabled = false; RefreshPlayer();
-        try { while (pollingPlayer) await Task.Delay(25); await action(); }
+        try {
+            if (operation is { IsCompleted: false }) {
+                requestedTrack!.PlaybackAction = "Buffering…";
+                nowPlaying.Text = requestedTrack.Title + " · Stopping scan…";
+                pauseScan.IsEnabled = false;
+                SetStatus("Stopping scan to play " + requestedTrack.Title + ". Tracks found will be kept.");
+                cancellation!.Cancel(); await operation;
+            }
+            while (pollingPlayer) await Task.Delay(25);
+            if (!closeRequested) await action();
+        }
         catch (Exception ex) { await player.StopAsync(); SetStatus("Music player: " + ex.Message); }
-        finally { playerBusy = false; foreach (var button in idle) button.IsEnabled = true; site.IsEnabled = clearScan.IsEnabled = list.IsEnabled = true; RefreshPlayer(); }
+        finally {
+            if (requestedTrack != null && player.Track?.Key != requestedTrack.Key) requestedTrack.PlaybackAction = "Play";
+            playerBusy = false; foreach (var button in idle) button.IsEnabled = true; site.IsEnabled = clearScan.IsEnabled = list.IsEnabled = true; RefreshPlayer();
+        }
     }
     private async Task PollPlayerAsync()
     {
@@ -223,7 +236,7 @@ public sealed class MainWindow : Window
     }
     private async Task Scan(CancellationToken token, bool find = false)
     {
-        scanControl = new(); pauseScan.IsEnabled = true; clearScan.IsEnabled = true; search.IsEnabled = true;
+        scanControl = new(); pauseScan.IsEnabled = true; clearScan.IsEnabled = true; search.IsEnabled = true; list.IsEnabled = true;
         scanControl.Paused = () => SetStatus("Scan paused. Resume continues from here. Clear scanned list starts over; change site filters between scans.");
         catalog.Clear(); RefreshTracks();
         var query = find ? search.Text?.Trim() ?? "" : null;

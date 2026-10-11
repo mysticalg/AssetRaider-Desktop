@@ -137,7 +137,7 @@ public sealed class MainForm : Form
         grid.CurrentCellDirtyStateChanged += (_, _) => { if (grid.IsCurrentCellDirty) grid.CommitEdit(DataGridViewDataErrorContexts.Commit); };
         grid.CellValueChanged += (_, _) => UpdateCount();
         grid.CellContentClick += (_, e) => {
-            if (e.RowIndex >= 0 && e.ColumnIndex == 1 && operation is not { IsCompleted: false } && !playerBusy && grid.Rows[e.RowIndex].DataBoundItem is Track track)
+            if (e.RowIndex >= 0 && e.ColumnIndex == 1 && !playerBusy && grid.Rows[e.RowIndex].DataBoundItem is Track track)
                 _ = PlayTrackAsync(track);
         };
         layout.Controls.Add(grid, 0, 4);
@@ -234,28 +234,41 @@ public sealed class MainForm : Form
         catch (Exception ex) { SetStatus(ex.Message); }
         finally
         {
-            scanControl = null; pauseScan.Enabled = false; pauseScan.Text = "Pause scan"; clearScan.Enabled = !clearing; search.Enabled = true;
+            scanControl = null; pauseScan.Enabled = false; pauseScan.Text = "Pause scan"; clearScan.Enabled = !clearing && !playerBusy; search.Enabled = true;
             stop.Enabled = false; grid.ReadOnly = false; folder.Enabled = true;
-            sitePicker.SelectedIndex = browser.Site.Id == "suno" ? 1 : 0; sitePicker.Enabled = true;
+            sitePicker.SelectedIndex = browser.Site.Id == "suno" ? 1 : 0; sitePicker.Enabled = !playerBusy;
             foreach (DataGridViewColumn column in grid.Columns) column.ReadOnly = column.Index != 0;
-            foreach (var button in idleButtons) button.Enabled = true;
+            foreach (var button in idleButtons) button.Enabled = !playerBusy;
             RefreshPlayer();
             cancellation.Dispose(); cancellation = null;
         }
     }
     private async Task PlayTrackAsync(Track track)
     {
-        if (player.Track?.Key == track.Key) { await PlayerActionAsync(() => player.ToggleAsync()); return; }
-        await PlayerActionAsync(() => player.PlayAsync(track, CancellationToken.None));
+        if (player.Track?.Key == track.Key) { await PlayerActionAsync(() => player.ToggleAsync(), track); return; }
+        await PlayerActionAsync(() => player.PlayAsync(track, CancellationToken.None), track);
     }
-    private async Task PlayerActionAsync(Func<Task> action)
+    private async Task PlayerActionAsync(Func<Task> action, Track? requestedTrack = null)
     {
-        if (closeRequested || playerBusy || clearing || operation is { IsCompleted: false }) return;
+        if (closeRequested || playerBusy || clearing || (operation is { IsCompleted: false } && (requestedTrack == null || scanControl == null))) return;
         playerBusy = true; foreach (var button in idleButtons) button.Enabled = false;
         sitePicker.Enabled = false; clearScan.Enabled = false; RefreshPlayer();
-        try { while (pollingPlayer) await Task.Delay(25); await action(); }
+        try {
+            if (operation is { IsCompleted: false }) {
+                requestedTrack!.PlaybackAction = "Buffering…";
+                nowPlaying.Text = requestedTrack.Title + " · Stopping scan…";
+                pauseScan.Enabled = false;
+                SetStatus("Stopping scan to play " + requestedTrack.Title + ". Tracks found will be kept.");
+                cancellation!.Cancel(); await operation;
+            }
+            while (pollingPlayer) await Task.Delay(25);
+            if (!closeRequested) await action();
+        }
         catch (Exception ex) { await player.StopAsync(); SetStatus("Music player: " + ex.Message); }
-        finally { playerBusy = false; foreach (var button in idleButtons) button.Enabled = true; sitePicker.Enabled = true; clearScan.Enabled = true; RefreshPlayer(); }
+        finally {
+            if (requestedTrack != null && player.Track?.Key != requestedTrack.Key) requestedTrack.PlaybackAction = "Play";
+            playerBusy = false; foreach (var button in idleButtons) button.Enabled = true; sitePicker.Enabled = true; clearScan.Enabled = true; RefreshPlayer();
+        }
     }
     private async Task PollPlayerAsync()
     {
