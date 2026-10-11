@@ -7,12 +7,13 @@
     <Nullable>enable</Nullable>
     <AssemblyName>AssetRaider</AssemblyName>
     <RootNamespace>AssetRaider.Desktop</RootNamespace>
-    <Version>0.3.7</Version>
+    <Version>0.3.8</Version>
     <ApplicationIcon>../brand/app-icon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="NAudio" Version="3.1.0" />
     <PackageReference Include="Microsoft.Playwright" Version="1.63.0" />
+    <PackageReference Include="SkiaSharp" Version="2.88.9" />
     <EmbeddedResource Include="Scripts/*.js" />
     <EmbeddedResource Include="../brand/app-icon.png" LogicalName="AssetRaider.Brand.Icon.png" />
     <EmbeddedResource Include="../brand/app-icon.ico" LogicalName="AssetRaider.Brand.Icon.ico" />

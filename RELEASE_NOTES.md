@@ -1,4 +1,6 @@
-# AssetRaider Desktop 0.3.7 — music player and live spectrum
+# AssetRaider Desktop 0.3.8 — music player and live spectrum
+
+Selection-header toggle; ascending/descending Song, numeric Length and Status sorting; artwork thumbnails with lazy loading and placeholders. Next and automatic advance follow the visible sorted list. Shuffle plays each track once per cycle; Repeat cycles Off/All/One. Scanned selections survive sorting and filtering. Clicking Play stops an active or paused scan, keeping tracks already found. Buffering is shown while a track loads. Preview controls remain blocked during recording.
 
 Play any scanned track from its row. The music player provides pause/resume, replay, seeking, elapsed time and source quality while the dedicated Chrome window is minimized. Starting a scan, changing sites or recording stops the preview first; playback and seeking controls are unavailable during recording.
 

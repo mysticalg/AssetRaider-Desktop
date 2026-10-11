@@ -1,6 +1,10 @@
-# AssetRaider 0.4.7 beta — macOS and Linux
+# AssetRaider 0.4.8 beta — macOS and Linux
 
 ## Music player
+
+The selection-column header toggles all visible tracks. Click **Song**, **Length** or **Status** to sort, then click again to reverse. Selections and the name filter are preserved; duration sorting is numeric. Track artwork loads as rows become visible.
+
+**Next** and automatic advance follow the visible sorted list. **Shuffle** plays each visible track once per cycle. **Repeat** cycles through **Off**, **All** (repeat the list) and **One** (loop the current track). WAV recording retains its normal queue behavior.
 
 Click **Play** beside a scanned track to listen without saving a file. Pause, resume, replay and seek from the player bar while the dedicated Chrome window stays minimized. The spectrum shows actual captured audio, also during recording. Scanning, changing sites and recording stop preview playback first. Linux connects its private audio channel to your default speakers only while previewing. macOS needs its existing system-audio permission for the spectrum.
 

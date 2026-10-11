@@ -12,6 +12,12 @@ public sealed class MainForm : Form
     private readonly Label playbackTime = new() { Text = "0:00 / 0:00", AutoSize = true };
     private readonly Button playbackToggle = new() { Text = "Pause", Enabled = false };
     private readonly Button playbackStop = new() { Text = "Stop player", Enabled = false };
+    private readonly Button playbackNext = new() { Text = "Next", Enabled = false };
+    private readonly CheckBox shuffle = new() { Text = "Shuffle", Appearance = Appearance.Button, AutoSize = true };
+    private readonly Button repeat = new() { Text = "Repeat: Off" };
+    private TrackSort sort;
+    private bool sortDescending;
+    private readonly ArtworkCache artwork;
     private readonly TrackBar playbackSeek = new() { Minimum = 0, Maximum = 1000, TickStyle = TickStyle.None, Dock = DockStyle.Fill, Enabled = false };
     private readonly System.Windows.Forms.Timer playerTimer = new() { Interval = 250 };
     private bool playerBusy, pollingPlayer, seekingPlayer;
@@ -40,9 +46,11 @@ public sealed class MainForm : Form
     public MainForm()
     {
         player = new(browser);
+        artwork = new(() => { if (!IsDisposed) grid.Invalidate(); });
+        Disposed += (_, _) => artwork.Dispose();
         player.Changed += RefreshPlayer;
-        Text = "AssetRaider 0.3.7 — Udio + Suno WAV Recorder";
-        MinimumSize = new Size(960, 840); Size = new Size(1160, 940);
+        Text = "AssetRaider 0.3.8 — Udio + Suno WAV Recorder";
+        MinimumSize = new Size(960, 880); Size = new Size(1160, 980);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10);
         BackColor = Color.FromArgb(242, 245, 239); ForeColor = Color.FromArgb(31, 40, 32);
@@ -53,7 +61,7 @@ public sealed class MainForm : Form
         layout.RowStyles.Add(new(SizeType.Absolute, 46));
         layout.RowStyles.Add(new(SizeType.Absolute, 46));
         layout.RowStyles.Add(new(SizeType.Percent, 100));
-        layout.RowStyles.Add(new(SizeType.Absolute, 70));
+        layout.RowStyles.Add(new(SizeType.Absolute, 110));
         layout.RowStyles.Add(new(SizeType.Absolute, 74));
         layout.RowStyles.Add(new(SizeType.Absolute, 46));
         layout.RowStyles.Add(new(SizeType.Absolute, 52));
@@ -128,11 +136,33 @@ public sealed class MainForm : Form
         grid.Columns.Add(new DataGridViewCheckBoxColumn { DataPropertyName = nameof(Track.Selected), HeaderText = "✓", Width = 44 });
         grid.Columns.Add(new DataGridViewButtonColumn { DataPropertyName = nameof(Track.PlaybackAction), Name = "Playback", HeaderText = "Player", Width = 112, ReadOnly = true });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Title), HeaderText = "Song", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 45, ReadOnly = true });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Duration), HeaderText = "Length", Width = 70, ReadOnly = true });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Duration), HeaderText = "Length", Width = 90, ReadOnly = true });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.SourceQualityText), HeaderText = "Source quality", Width = 255, ReadOnly = true,
             DefaultCellStyle = new DataGridViewCellStyle { WrapMode = DataGridViewTriState.True, Font = new Font("Segoe UI", 9) },
             ToolTipText = "Encoding reported by Chrome for this song. ~kbps is an approximate stream average. Unknown means unavailable; WAV output settings are separate." });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Status), HeaderText = "Status", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 55, ReadOnly = true });
+        grid.Columns.Insert(2, new DataGridViewTextBoxColumn { Name = "Artwork", HeaderText = "", Width = 56, ReadOnly = true, SortMode = DataGridViewColumnSortMode.NotSortable });
+        foreach (var property in new[] { nameof(Track.Title), nameof(Track.Duration), nameof(Track.Status) }) grid.Columns.Cast<DataGridViewColumn>().Single(c => c.DataPropertyName == property).SortMode = DataGridViewColumnSortMode.Programmatic;
+        grid.ColumnHeaderMouseClick += (_, e) => {
+            if (!CanChangeList()) return;
+            if (e.ColumnIndex == 0) ToggleVisibleSelection();
+            else {
+                var property = grid.Columns[e.ColumnIndex].DataPropertyName;
+                if (property == nameof(Track.Title)) SortTracks(TrackSort.Song);
+                else if (property == nameof(Track.Duration)) SortTracks(TrackSort.Length);
+                else if (property == nameof(Track.Status)) SortTracks(TrackSort.Status);
+            }
+        };
+        grid.CellPainting += (_, e) => {
+            if (e.RowIndex < 0 || e.ColumnIndex != 2 || grid.Rows[e.RowIndex].DataBoundItem is not Track track) return;
+            e.PaintBackground(e.ClipBounds, true);
+            var area = new Rectangle(e.CellBounds.X + 7, e.CellBounds.Y + 5, 40, 40);
+            var image = artwork.Get(track.ArtworkUrl);
+            if (image != null) e.Graphics!.DrawImage(image, area);
+            else { using var brush = new SolidBrush(Color.FromArgb(224,232,217)); e.Graphics!.FillRectangle(brush, area); TextRenderer.DrawText(e.Graphics, "♪", Font, area, Color.FromArgb(108,128,86), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+            e.Handled = true;
+        };
+        grid.RowTemplate.MinimumHeight = 50;
         grid.DataSource = tracks;
         grid.CurrentCellDirtyStateChanged += (_, _) => { if (grid.IsCurrentCellDirty) grid.CommitEdit(DataGridViewDataErrorContexts.Commit); };
         grid.CellValueChanged += (_, _) => UpdateCount();
@@ -141,18 +171,24 @@ public sealed class MainForm : Form
                 _ = PlayTrackAsync(track);
         };
         layout.Controls.Add(grid, 0, 4);
-        var playerBar = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, RowCount = 2 };
-        playerBar.ColumnStyles.Add(new(SizeType.Absolute, 88)); playerBar.ColumnStyles.Add(new(SizeType.Absolute, 125));
+        var playerBar = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 3 };
         playerBar.ColumnStyles.Add(new(SizeType.Percent, 100)); playerBar.ColumnStyles.Add(new(SizeType.Absolute, 120));
-        playerBar.RowStyles.Add(new(SizeType.Absolute, 25)); playerBar.RowStyles.Add(new(SizeType.Percent, 100));
-        playerBar.Controls.Add(nowPlaying, 0, 0); playerBar.SetColumnSpan(nowPlaying, 4);
-        StyleButton(playbackToggle); StyleButton(playbackStop);
+        playerBar.RowStyles.Add(new(SizeType.Absolute, 25)); playerBar.RowStyles.Add(new(SizeType.Absolute, 40)); playerBar.RowStyles.Add(new(SizeType.Percent, 100));
+        playerBar.Controls.Add(nowPlaying, 0, 0); playerBar.SetColumnSpan(nowPlaying, 2);
+        var transport = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Margin = Padding.Empty };
+        foreach (var button in new[] {playbackToggle, playbackStop, playbackNext, repeat}) StyleButton(button);
+        shuffle.MinimumSize = new Size(100,34); shuffle.Height = 34; shuffle.FlatStyle = FlatStyle.Flat; shuffle.Padding = new Padding(7,2,7,2); shuffle.Margin = new Padding(0,2,8,2);
+        shuffle.CheckedChanged += (_, _) => { player.Playlist.Shuffle = shuffle.Checked; RefreshPlayer(); };
+        repeat.Click += (_, _) => { player.Playlist.Repeat = (RepeatMode)(((int)player.Playlist.Repeat + 1) % 3); RefreshPlayer(); };
+        playbackNext.Click += (_, _) => _ = PlayerActionAsync(() => player.NextAsync());
+        transport.Controls.AddRange([playbackToggle, playbackStop, playbackNext, shuffle, repeat]);
+        playerBar.Controls.Add(transport, 0, 1); playerBar.SetColumnSpan(transport, 2);
         playbackToggle.Click += (_, _) => _ = PlayerActionAsync(() => player.ToggleAsync());
         playbackStop.Click += (_, _) => _ = PlayerActionAsync(() => player.StopAsync());
         playbackSeek.MouseDown += (_, _) => seekingPlayer = true;
         playbackSeek.MouseUp += (_, _) => { seekingPlayer = false; _ = PlayerActionAsync(() => player.SeekAsync(playbackSeek.Value / 1000d * (player.State?.Duration ?? 0))); };
         playbackSeek.KeyUp += (_, _) => _ = PlayerActionAsync(() => player.SeekAsync(playbackSeek.Value / 1000d * (player.State?.Duration ?? 0)));
-        playerBar.Controls.Add(playbackToggle, 0, 1); playerBar.Controls.Add(playbackStop, 1, 1); playerBar.Controls.Add(playbackSeek, 2, 1); playerBar.Controls.Add(playbackTime, 3, 1);
+        playerBar.Controls.Add(playbackSeek, 0, 2); playerBar.Controls.Add(playbackTime, 1, 2);
         layout.Controls.Add(playerBar, 0, 5); layout.Controls.Add(new SpectrumView { Dock = DockStyle.Fill }, 0, 6);
         playerTimer.Tick += async (_, _) => await PollPlayerAsync(); playerTimer.Start();
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(0, 7, 0, 0) };
@@ -188,12 +224,26 @@ public sealed class MainForm : Form
         button.Padding = new Padding(7, 2, 7, 2); button.BackColor = Color.White;
         button.Margin = new Padding(0, 2, 8, 2); button.FlatAppearance.BorderColor = Color.FromArgb(200, 213, 190);
     }
-    private void UpdateCount() => count.Text = $"{tracks.Count(t => t.Selected)} selected / {tracks.Count} shown / {catalog.Count} scanned";
+    private void UpdateCount()
+    {
+        var selected = tracks.Count(t => t.Selected);
+        count.Text = $"{selected} selected / {tracks.Count} shown / {catalog.Count} scanned";
+        grid.Columns[0].HeaderText = selected == 0 ? "☐" : selected == tracks.Count ? "☑" : "▣";
+        grid.Columns[0].HeaderCell.ToolTipText = tracks.Count > 0 && selected == tracks.Count ? "Deselect all visible tracks" : "Select all visible tracks";
+    }
+    private bool CanChangeList() => !closeRequested && !clearing && !playerBusy && (operation is not { IsCompleted: false } || scanControl != null);
+    private void ToggleVisibleSelection() { grid.EndEdit(); SelectTracks(tracks.Count > 0 && !tracks.All(t => t.Selected)); }
+    private void SortTracks(TrackSort column)
+    {
+        sortDescending = sort == column && !sortDescending; sort = column; RefreshTracks();
+        foreach (DataGridViewColumn item in grid.Columns) item.HeaderCell.SortGlyphDirection = item.DataPropertyName == (sort switch {TrackSort.Song => nameof(Track.Title), TrackSort.Length => nameof(Track.Duration), _ => nameof(Track.Status)}) ? sortDescending ? SortOrder.Descending : SortOrder.Ascending : SortOrder.None;
+    }
     private void RefreshTracks()
     {
         grid.EndEdit(); tracks.RaiseListChangedEvents = false;
-        tracks.Clear(); foreach (var track in catalog.Matching(search.Text)) tracks.Add(track);
+        tracks.Clear(); foreach (var track in catalog.Matching(search.Text, sort, sortDescending)) tracks.Add(track);
         tracks.RaiseListChangedEvents = true; tracks.ResetBindings(); UpdateCount();
+        player.Playlist.Update(tracks); RefreshPlayer();
     }
     private void TogglePause()
     {
@@ -239,14 +289,14 @@ public sealed class MainForm : Form
             sitePicker.SelectedIndex = browser.Site.Id == "suno" ? 1 : 0; sitePicker.Enabled = !playerBusy;
             foreach (DataGridViewColumn column in grid.Columns) column.ReadOnly = column.Index != 0;
             foreach (var button in idleButtons) button.Enabled = !playerBusy;
-            RefreshPlayer();
             cancellation.Dispose(); cancellation = null;
+            RefreshPlayer();
         }
     }
     private async Task PlayTrackAsync(Track track)
     {
         if (player.Track?.Key == track.Key) { await PlayerActionAsync(() => player.ToggleAsync(), track); return; }
-        await PlayerActionAsync(() => player.PlayAsync(track, CancellationToken.None), track);
+        await PlayerActionAsync(() => { player.Playlist.Begin(); return player.PlayAsync(track, CancellationToken.None); }, track);
     }
     private async Task PlayerActionAsync(Func<Task> action, Track? requestedTrack = null)
     {
@@ -274,7 +324,12 @@ public sealed class MainForm : Form
     {
         if (player.Track == null || playerBusy || pollingPlayer || clearing || operation is { IsCompleted: false }) return;
         pollingPlayer = true;
-        try { await player.PollAsync(); RefreshPlayer(); }
+        try {
+            await player.PollAsync(); RefreshPlayer();
+            if (player.State?.Done == true && player.Playlist.CanAdvance(player.Track, true) && operation is not {IsCompleted:false}) {
+                pollingPlayer = false; await PlayerActionAsync(() => player.NextAsync(true));
+            }
+        }
         catch (Exception ex) { await player.StopAsync(); RefreshPlayer(); SetStatus("Music player: " + ex.Message); }
         finally { pollingPlayer = false; }
     }
@@ -282,6 +337,9 @@ public sealed class MainForm : Form
     {
         var available = !playerBusy && cancellation == null && player.Track != null;
         playbackToggle.Enabled = playbackStop.Enabled = playbackSeek.Enabled = available;
+        playbackNext.Enabled = available && player.Playlist.CanAdvance(player.Track);
+        shuffle.Enabled = repeat.Enabled = !playerBusy && cancellation == null;
+        repeat.Text = "Repeat: " + player.Playlist.Repeat;
         playbackToggle.Text = player.State?.Done == true ? "Replay" : player.State?.Paused == true ? "Resume" : "Pause";
         nowPlaying.Text = player.Track == null ? "Music player · click Play beside a track · Chrome can stay minimized" : player.Track.Title + " · " + (player.IsBuffering ? "Buffering…" : player.Track.SourceQualityText) + (player.SpectrumError == null ? "" : " · Spectrum unavailable");
         playbackTime.Text = $"{TimeSpan.FromSeconds(player.State?.Elapsed ?? 0):m\\:ss} / {TimeSpan.FromSeconds(player.State?.Duration ?? 0):m\\:ss}";
@@ -322,14 +380,22 @@ public sealed class MainForm : Form
     }
     internal void CheckUi(string directory)
     {
-        catalog.Add(new() { Id = "ExampleTrack0001", Title = "Night Drive", Selected = true, SourceQuality = new("MP3", 44100, 96000, 2) });
-        catalog.Add(new() { Id = "ExampleTrack0002", Title = "Sunrise" });
+        catalog.Add(new() { Id = "ExampleTrack0001", Title = "Night Drive", Duration = "10:00", Status = "Saved WAV", Selected = true, SourceQuality = new("MP3", 44100, 96000, 2) });
+        catalog.Add(new() { Id = "ExampleTrack0002", Title = "Sunrise", Duration = "9:59" });
         search.Text = "night";
         if (tracks.Count != 1 || tracks[0].Title != "Night Drive") throw new Exception("Visible track-name filter failed.");
         search.Text = "sun";
         if (tracks.Count != 1 || tracks.Any(t => t.Selected)) throw new Exception("Hidden selected tracks leaked into the visible queue.");
         search.Text = "";
         if (tracks.Count != 2 || !tracks[0].Selected) throw new Exception("Clearing name filter lost tracks or selection.");
+        ToggleVisibleSelection(); if (tracks.Any(t => !t.Selected)) throw new Exception("Header select all failed.");
+        ToggleVisibleSelection(); if (tracks.Any(t => t.Selected)) throw new Exception("Header deselect all failed.");
+        search.Text = "night"; ToggleVisibleSelection(); search.Text = "";
+        if (!tracks[0].Selected || tracks[1].Selected) throw new Exception("Selection header changed hidden tracks.");
+        SortTracks(TrackSort.Length); if (tracks[0].Title != "Sunrise") throw new Exception("Header duration sort failed.");
+        SortTracks(TrackSort.Length); if (tracks[0].Title != "Night Drive" || !tracks[0].Selected) throw new Exception("Reverse sort lost selection.");
+        SortTracks(TrackSort.Status); if (tracks[0].Title != "Sunrise") throw new Exception("Header status sort failed.");
+        SortTracks(TrackSort.Song); if (tracks[0].Title != "Night Drive") throw new Exception("Header song sort failed.");
         Size = MinimumSize; Show(); Application.DoEvents();
         Directory.CreateDirectory(directory);
         using var bitmap = new Bitmap(Width, Height); DrawToBitmap(bitmap, new Rectangle(Point.Empty, Size));
@@ -340,7 +406,7 @@ public sealed class MainForm : Form
             foreach (Control child in bar.Controls)
                 if (child.Right > bar.ClientSize.Width || child.Bottom > bar.ClientSize.Height)
                     throw new Exception($"Control clipped at minimum size: {child.Text}");
-        File.WriteAllText(Path.Combine(directory, "ui-check.json"), "{\"Passed\":true,\"Checks\":\"Name filter, hidden selection, reset and minimum-size controls\"}");
+        File.WriteAllText(Path.Combine(directory, "ui-check.json"), "{\"Passed\":true,\"Checks\":\"Header selection, filtered selection, song/duration/status sorting, selection preservation and minimum-size controls\"}");
         closing = true; Close();
     }
     private async void OnClosing(object? sender, FormClosingEventArgs e)

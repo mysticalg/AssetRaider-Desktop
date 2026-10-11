@@ -25,6 +25,7 @@ internal static class CrossCheck
             LibraryScanCheck.RunAsync().GetAwaiter().GetResult();
             SourceQualityCheck.Run();
             AudioSpectrum.Check();
+            PlaybackPlaylist.Check();
             RecordingPolicyCheck.RunAsync(Path.Combine(directory, "repeat-" + Guid.NewGuid().ToString("N"))).GetAwaiter().GetResult();
             var track = new Track { Id = "ExampleTrack0001", Title = "Sample: song/unsafe?*" };
             var suno = new Track { Id = track.Id, Title = track.Title, Site = "suno" };

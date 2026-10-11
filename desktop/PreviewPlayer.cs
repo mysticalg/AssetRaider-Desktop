@@ -8,6 +8,7 @@ public sealed class PreviewPlayer(MusicBrowser browser)
     public string? SpectrumError { get; private set; }
     public bool IsBuffering => loading || State?.Buffering == true;
     public event Action? Changed;
+    public PlaybackPlaylist Playlist { get; } = new();
     private bool loading;
     private WavCapture? monitor;
     public async Task PlayAsync(Track track, CancellationToken cancellation)
@@ -20,7 +21,7 @@ public sealed class PreviewPlayer(MusicBrowser browser)
             try { monitor = await WavCapture.StartMonitorAsync(browser.ProcessId); }
             catch (Exception ex) { SpectrumError = ex.Message; }
             cancellation.ThrowIfCancellationRequested();
-            await browser.StartAsync(); loading = false; await PollAsync();
+            await browser.StartAsync(); Playlist.Started(track); loading = false; await PollAsync();
         }
         catch { await StopAsync(); throw; }
     }
@@ -36,6 +37,14 @@ public sealed class PreviewPlayer(MusicBrowser browser)
         finally { loading = false; UpdatePresentation(); }
     }
     public async Task SeekAsync(double seconds) { if (Track != null) { await browser.SeekPlaybackAsync(seconds); await PollAsync(); } }
+    public async Task NextAsync(bool automatic = false)
+    {
+        if (Track == null) return;
+        var next = Playlist.Next(Track, automatic);
+        if (next == null) return;
+        if (automatic && next.Key == Track.Key && State?.Done == true) await ToggleAsync();
+        else await PlayAsync(next, CancellationToken.None);
+    }
     public async Task PollAsync()
     {
         if (Track == null) return;

@@ -1,6 +1,10 @@
-# AssetRaider desktop — Udio + Suno player and WAV recorder (0.3.7)
+# AssetRaider desktop — Udio + Suno player and WAV recorder (0.3.8)
 
 ## Music player
+
+The selection-column header toggles selection for all visible tracks; a partial selection selects the rest, and clicking again clears selection. **Song**, **Length** and **Status** headers alternate ascending/descending order. Length is sorted by duration; unknown lengths stay last. Sorting keeps selections and follows the name filter. Artwork loads as rows become visible, with a music-note placeholder for missing images.
+
+**Next** advances through the visible list in its current order. Songs advance automatically when finished. **Shuffle** plays each visible track once before another cycle. **Repeat** cycles through **Off**, **All** (repeat the list) and **One** (loop the current song). These controls affect listening; the WAV recording queue keeps its normal behavior.
 
 Click **Play** beside a scanned track to listen without saving a file. Use the row button or player bar to pause, resume or replay; drag the seek slider to change position. The dedicated Chrome window can stay minimized. The live spectrum shows the browser's actual audio during listening and recording; it does not change the sound. Starting a scan, changing sites or recording stops the preview first. Playback controls are disabled during recording.
 
@@ -48,10 +52,10 @@ With the .NET 10 SDK installed:
 
 ```powershell
 ./scripts/build-desktop.ps1
-$check = Start-Process ./output/desktop-0.3.7/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
+$check = Start-Process ./output/desktop-0.3.8/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
 Get-Content C:\Temp\AssetRaiderTest\self-test.json
 ```
 
 The self-test plays a quiet three-second tone and captures this process's real Windows audio output. It checks audible WAV data, duration, stable names, resume, and partial-file rejection. `--launch-check C:\Temp\AssetRaiderCheck` checks manual login arguments, structured browser data conversion, and migration of completed tracks without playing sound. Neither check verifies a signed-in site recording.
 
-Dependencies: [NAudio](https://github.com/naudio/NAudio) (MIT), [Microsoft Playwright .NET](https://github.com/microsoft/playwright-dotnet) (MIT, with the Apache-2.0 Playwright driver), Microsoft .NET runtime. Licenses are included in `licenses` and `.playwright`. NAudio's [process-loopback documentation](https://github.com/naudio/NAudio/blob/main/Docs/WasapiRecorder.md) describes the Windows recording API used here. The app does not intercept encrypted media segments or license keys.
+Dependencies: [NAudio](https://github.com/naudio/NAudio) (MIT), [Microsoft Playwright .NET](https://github.com/microsoft/playwright-dotnet) (MIT, with the Apache-2.0 Playwright driver), [SkiaSharp](https://github.com/mono/SkiaSharp) (MIT, for artwork thumbnails), Microsoft .NET runtime. Licenses are included in `licenses` and `.playwright`. NAudio's [process-loopback documentation](https://github.com/naudio/NAudio/blob/main/Docs/WasapiRecorder.md) describes the Windows recording API used here. The app does not intercept encrypted media segments or license keys.

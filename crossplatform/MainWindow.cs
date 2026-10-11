@@ -20,6 +20,13 @@ public sealed class MainWindow : Window
     private readonly TextBlock playbackTime = new() { Text = "0:00 / 0:00", VerticalAlignment = VerticalAlignment.Center };
     private readonly Button playbackToggle = new() { Content = "Pause", IsEnabled = false };
     private readonly Button playbackStop = new() { Content = "Stop player", IsEnabled = false };
+    private readonly Button playbackNext = new() { Content = "Next", IsEnabled = false };
+    private readonly CheckBox shuffle = new() { Content = "Shuffle", VerticalAlignment = VerticalAlignment.Center };
+    private readonly Button repeat = new() { Content = "Repeat: Off" };
+    private readonly Button selectHeader = new() { Content = "☐", Padding = new Thickness(4), FontSize = 18 };
+    private readonly Dictionary<TrackSort, Button> sortHeaders = [];
+    private TrackSort sort;
+    private bool sortDescending;
     private readonly Slider playbackSeek = new() { Minimum = 0, Maximum = 1000, IsEnabled = false };
     private readonly DispatcherTimer playerTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
     private bool playerBusy, pollingPlayer, seekingPlayer;
@@ -48,7 +55,7 @@ public sealed class MainWindow : Window
     {
         player = new(browser);
         player.Changed += RefreshPlayer;
-        Title = "AssetRaider 0.4.7 beta — Udio + Suno to WAV"; Width = 1120; Height = 960; MinWidth = 960; MinHeight = 840;
+        Title = "AssetRaider 0.4.8 beta — Udio + Suno to WAV"; Width = 1120; Height = 1000; MinWidth = 960; MinHeight = 880;
         Background = Brush.Parse("#101810");
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto,Auto,Auto"), Margin = new Thickness(24), RowSpacing = 10 };
         void Row(Control control, int row) { Grid.SetRow(control, row); root.Children.Add(control); }
@@ -100,30 +107,48 @@ public sealed class MainWindow : Window
         list.ItemsSource = tracks;
         list.Background = Brush.Parse("#192219"); list.BorderBrush = Brush.Parse("#34422E"); list.BorderThickness = new Thickness(1);
         list.ItemTemplate = new FuncDataTemplate<Track>((track, scope) => {
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,112,2*,Auto,2*,2*"), ColumnSpacing = 10, Margin = new Thickness(4, 7) };
+            if (track == null) return new Border();
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("34,100,46,2*,66,2*,2*"), ColumnSpacing = 8, Margin = new Thickness(4, 7) };
             var selected = new CheckBox { VerticalAlignment = VerticalAlignment.Center }; selected.Bind(CheckBox.IsCheckedProperty, new Binding(nameof(Track.Selected)) { Source = track, Mode = BindingMode.TwoWay });
             row.Children.Add(selected);
             var play = new Button { Padding = new Thickness(8, 5), HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Center };
             play.Bind(Avalonia.Controls.Button.ContentProperty, new Binding(nameof(Track.PlaybackAction)) { Source = track }); play.Click += (_, _) => _ = PlayTrackAsync(track);
             Grid.SetColumn(play, 1); row.Children.Add(play);
-            var name = new TextBlock { Text = track.Title, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(name, 2); row.Children.Add(name);
-            var length = new TextBlock { Text = track.Duration, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(length, 3); row.Children.Add(length);
+            var thumb = new ArtworkThumbnail(track.ArtworkUrl); Grid.SetColumn(thumb, 2); row.Children.Add(thumb);
+            var name = new TextBlock { Text = track.Title, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(name, 3); row.Children.Add(name);
+            var length = new TextBlock { Text = track.Duration, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(length, 4); row.Children.Add(length);
             var quality = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 12, Foreground = Brush.Parse("#BCD49F"), VerticalAlignment = VerticalAlignment.Center };
             quality.Bind(TextBlock.TextProperty, new Binding(nameof(Track.SourceQualityText)) { Source = track, StringFormat = "Source: {0}" });
             ToolTip.SetTip(quality, "Encoding reported by Chrome. ~kbps is an approximate stream average. Unknown means unavailable; WAV output settings are separate.");
-            Grid.SetColumn(quality, 4); row.Children.Add(quality);
-            var detail = new TextBlock { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center }; detail.Bind(TextBlock.TextProperty, new Binding(nameof(Track.Status)) { Source = track }); Grid.SetColumn(detail, 5); row.Children.Add(detail);
+            Grid.SetColumn(quality, 5); row.Children.Add(quality);
+            var detail = new TextBlock { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center }; detail.Bind(TextBlock.TextProperty, new Binding(nameof(Track.Status)) { Source = track }); Grid.SetColumn(detail, 6); row.Children.Add(detail);
             return row;
-        }); Row(list, 4);
-        var playerBar = new Grid { ColumnDefinitions = new ColumnDefinitions("88,115,*,120"), RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnSpacing = 8, RowSpacing = 5 };
-        playerBar.Children.Add(nowPlaying); Grid.SetColumnSpan(nowPlaying, 4);
+        });
+        var table = new Grid { RowDefinitions = new RowDefinitions("Auto,*") };
+        var headers = new Grid { ColumnDefinitions = new ColumnDefinitions("34,100,46,2*,66,2*,2*"), ColumnSpacing = 8, Margin = new Thickness(12,0,24,4) };
+        selectHeader.Click += (_, _) => { if (CanChangeList()) ToggleVisibleSelection(); }; headers.Children.Add(selectHeader);
+        void Heading(string text, int column, TrackSort ordering = TrackSort.None) {
+            Control heading;
+            if (ordering == TrackSort.None) heading = new TextBlock {Text=text,VerticalAlignment=VerticalAlignment.Center};
+            else { var button = new Button {Content=text,Padding=new Thickness(4,6)}; button.Click += (_, _) => {if (CanChangeList()) SortTracks(ordering);}; sortHeaders[ordering] = button; heading=button; }
+            Grid.SetColumn(heading,column); headers.Children.Add(heading);
+        }
+        Heading("Player",1); Heading("Song",3,TrackSort.Song); Heading("Length",4,TrackSort.Length); Heading("Source quality",5); Heading("Status",6,TrackSort.Status);
+        table.Children.Add(headers); Grid.SetRow(list,1); table.Children.Add(list); Row(table,4);
+        var playerBar = new Grid { ColumnDefinitions = new ColumnDefinitions("*,120"), RowDefinitions = new RowDefinitions("Auto,Auto,Auto"), ColumnSpacing = 8, RowSpacing = 5 };
+        playerBar.Children.Add(nowPlaying); Grid.SetColumnSpan(nowPlaying, 2);
         playbackToggle.Click += (_, _) => _ = PlayerActionAsync(() => player.ToggleAsync());
         playbackStop.Click += (_, _) => _ = PlayerActionAsync(() => player.StopAsync());
         playbackSeek.AddHandler(Avalonia.Input.InputElement.PointerPressedEvent, (_, _) => seekingPlayer = true, Avalonia.Interactivity.RoutingStrategies.Tunnel, true);
         playbackSeek.AddHandler(Avalonia.Input.InputElement.PointerReleasedEvent, (_, _) => { seekingPlayer = false; _ = PlayerActionAsync(() => player.SeekAsync(playbackSeek.Value / 1000 * (player.State?.Duration ?? 0))); }, Avalonia.Interactivity.RoutingStrategies.Tunnel, true);
         playbackSeek.KeyUp += (_, _) => _ = PlayerActionAsync(() => player.SeekAsync(playbackSeek.Value / 1000 * (player.State?.Duration ?? 0)));
-        Control[] controls = [playbackToggle, playbackStop, playbackSeek, playbackTime];
-        for (var i = 0; i < controls.Length; i++) { Grid.SetRow(controls[i], 1); Grid.SetColumn(controls[i], i); playerBar.Children.Add(controls[i]); }
+        playbackNext.Click += (_, _) => _ = PlayerActionAsync(() => player.NextAsync());
+        shuffle.IsCheckedChanged += (_, _) => { player.Playlist.Shuffle = shuffle.IsChecked == true; RefreshPlayer(); };
+        repeat.Click += (_, _) => { player.Playlist.Repeat = (RepeatMode)(((int)player.Playlist.Repeat + 1) % 3); RefreshPlayer(); };
+        var transport = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        foreach (var control in new Control[] {playbackToggle,playbackStop,playbackNext,shuffle,repeat}) transport.Children.Add(control);
+        Grid.SetRow(transport,1); Grid.SetColumnSpan(transport,2); playerBar.Children.Add(transport);
+        Grid.SetRow(playbackSeek,2); playerBar.Children.Add(playbackSeek); Grid.SetRow(playbackTime,2); Grid.SetColumn(playbackTime,1); playerBar.Children.Add(playbackTime);
         Row(playerBar, 5);
         var spectrum = new StackPanel { Spacing = 3 }; spectrum.Children.Add(new TextBlock { Text = "AUDIO SPECTRUM   ·   50 Hz → 18 kHz", FontSize = 10, Foreground = Brush.Parse("#BCD49F") }); spectrum.Children.Add(new SpectrumView()); Row(spectrum, 6);
         playerTimer.Tick += async (_, _) => await PollPlayerAsync(); playerTimer.Start();
@@ -140,9 +165,17 @@ public sealed class MainWindow : Window
     }
     internal void SeedUiCheck()
     {
-        catalog.Add(new Track { Id = "ExampleTrack0001", Title = "Night Drive", Duration = "3:24", SourceQuality = new("MP3", 44100, 96000, 2) });
-        catalog.Add(new Track { Id = "ExampleTrack0002", Title = "Sunrise", Duration = "2:48", SourceQuality = SourceQuality.Unknown });
+        catalog.Add(new Track { Id = "ExampleTrack0001", Title = "Night Drive", Duration = "10:00", Status = "Saved WAV", SourceQuality = new("MP3", 44100, 96000, 2) });
+        catalog.Add(new Track { Id = "ExampleTrack0002", Title = "Sunrise", Duration = "9:59", SourceQuality = SourceQuality.Unknown });
         RefreshTracks();
+        ToggleVisibleSelection(); if (tracks.Any(t => !t.Selected)) throw new Exception("Header select all failed.");
+        ToggleVisibleSelection(); if (tracks.Any(t => t.Selected)) throw new Exception("Header deselect all failed.");
+        search.Text = "night"; RefreshTracks(); ToggleVisibleSelection(); search.Text = ""; RefreshTracks();
+        if (!tracks.Single(t => t.Title == "Night Drive").Selected || tracks.Single(t => t.Title == "Sunrise").Selected) throw new Exception("Header changed hidden selection.");
+        SortTracks(TrackSort.Length); if (tracks[0].Title != "Sunrise") throw new Exception("Numeric duration sort failed.");
+        SortTracks(TrackSort.Length); if (tracks[0].Title != "Night Drive" || !tracks[0].Selected) throw new Exception("Reverse sort lost selection.");
+        SortTracks(TrackSort.Status); if (tracks[0].Title != "Sunrise") throw new Exception("Status sorting failed.");
+        SortTracks(TrackSort.Song); if (tracks[0].Title != "Night Drive") throw new Exception("Song sorting failed.");
     }
     private Button Button(string label, Action action)
     {
@@ -150,8 +183,25 @@ public sealed class MainWindow : Window
         result.Click += (_, _) => action(); idle.Add(result); return result;
     }
     private void Select(bool selected) { foreach (var track in tracks) track.Selected = selected; UpdateCount(); }
-    private void UpdateCount() => count.Text = $"{tracks.Count(t => t.Selected)} selected / {tracks.Count} shown / {catalog.Count} scanned";
-    private void RefreshTracks() { tracks.Clear(); foreach (var track in catalog.Matching(search.Text)) tracks.Add(track); UpdateCount(); }
+    private void UpdateCount()
+    {
+        var selected = tracks.Count(t => t.Selected);
+        count.Text = $"{selected} selected / {tracks.Count} shown / {catalog.Count} scanned";
+        selectHeader.Content = selected == 0 ? "☐" : selected == tracks.Count ? "☑" : "▣";
+        ToolTip.SetTip(selectHeader, tracks.Count > 0 && selected == tracks.Count ? "Deselect all visible tracks" : "Select all visible tracks");
+    }
+    private bool CanChangeList() => !closeRequested && !clearing && !playerBusy && (operation is not {IsCompleted:false} || scanControl != null);
+    private void ToggleVisibleSelection() => Select(tracks.Count > 0 && !tracks.All(t => t.Selected));
+    private void SortTracks(TrackSort column) {
+        sortDescending = sort == column && !sortDescending; sort = column; RefreshTracks();
+        foreach (var (ordering, button) in sortHeaders) button.Content = ordering + (ordering == sort ? sortDescending ? " ▼" : " ▲" : "");
+    }
+    private void SelectionChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) { if (e.PropertyName == nameof(Track.Selected)) UpdateCount(); }
+    private void RefreshTracks() {
+        foreach (var track in tracks) track.PropertyChanged -= SelectionChanged;
+        tracks.Clear(); foreach (var track in catalog.Matching(search.Text,sort,sortDescending)) { tracks.Add(track); track.PropertyChanged += SelectionChanged; }
+        UpdateCount(); player.Playlist.Update(tracks); RefreshPlayer();
+    }
     private void TogglePause()
     {
         if (scanControl == null) return;
@@ -193,7 +243,7 @@ public sealed class MainWindow : Window
     private async Task PlayTrackAsync(Track track)
     {
         if (player.Track?.Key == track.Key) { await PlayerActionAsync(() => player.ToggleAsync(), track); return; }
-        await PlayerActionAsync(() => player.PlayAsync(track, CancellationToken.None), track);
+        await PlayerActionAsync(() => { player.Playlist.Begin(); return player.PlayAsync(track, CancellationToken.None); }, track);
     }
     private async Task PlayerActionAsync(Func<Task> action, Track? requestedTrack = null)
     {
@@ -221,7 +271,12 @@ public sealed class MainWindow : Window
     {
         if (player.Track == null || playerBusy || pollingPlayer || clearing || operation is { IsCompleted: false }) return;
         pollingPlayer = true;
-        try { await player.PollAsync(); RefreshPlayer(); }
+        try {
+            await player.PollAsync(); RefreshPlayer();
+            if (player.State?.Done == true && player.Playlist.CanAdvance(player.Track,true) && operation is not {IsCompleted:false}) {
+                pollingPlayer = false; await PlayerActionAsync(() => player.NextAsync(true));
+            }
+        }
         catch (Exception ex) { await player.StopAsync(); RefreshPlayer(); SetStatus("Music player: " + ex.Message); }
         finally { pollingPlayer = false; }
     }
@@ -229,6 +284,9 @@ public sealed class MainWindow : Window
     {
         var available = !playerBusy && cancellation == null && player.Track != null;
         playbackToggle.IsEnabled = playbackStop.IsEnabled = playbackSeek.IsEnabled = available;
+        playbackNext.IsEnabled = available && player.Playlist.CanAdvance(player.Track);
+        shuffle.IsEnabled = repeat.IsEnabled = !playerBusy && cancellation == null;
+        repeat.Content = "Repeat: " + player.Playlist.Repeat;
         playbackToggle.Content = player.State?.Done == true ? "Replay" : player.State?.Paused == true ? "Resume" : "Pause";
         nowPlaying.Text = player.Track == null ? "Music player · click Play beside a track · Chrome can stay minimized" : player.Track.Title + " · " + (player.IsBuffering ? "Buffering…" : player.Track.SourceQualityText) + (player.SpectrumError == null ? "" : " · Spectrum unavailable");
         playbackTime.Text = $"{TimeSpan.FromSeconds(player.State?.Elapsed ?? 0):m\\:ss} / {TimeSpan.FromSeconds(player.State?.Duration ?? 0):m\\:ss}";

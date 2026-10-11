@@ -204,13 +204,21 @@ describe("desktop library scanning", () => {
 
   it("reads Suno clip rows, skips unfinished clips and excludes playbar/recommendation links", () => {
     document.body.innerHTML = `<div role="group" data-testid="clip-row" data-clip-status="complete">
-      <div role="button" aria-label="Play Same title"><span>3:18</span></div>
+      <div role="button" aria-label="Play Same title"><img src="https://cdn.example.test/cover.webp"><span>3:18</span></div>
       <a href="https://suno.com/song/11111111-1111-4111-8111-111111111111">Same title</a>
     </div><div role="group" data-testid="clip-row" data-clip-status="streaming">
       <a href="https://suno.com/song/22222222-2222-4222-8222-222222222222">Not ready</a>
     </div><a aria-label="Playbar: Title" href="https://suno.com/song/33333333-3333-4333-8333-333333333333">Not in library</a>`;
     const tracks = (0, eval)(`(${source("library")})`)({ site: "suno" });
-    expect(tracks).toEqual([{ Id: "11111111-1111-4111-8111-111111111111", Title: "Same title", Duration: "3:18", Site: "suno" }]);
+    expect(tracks).toEqual([{ Id: "11111111-1111-4111-8111-111111111111", Title: "Same title", Duration: "3:18", Site: "suno", ArtworkUrl: "https://cdn.example.test/cover.webp" }]);
+  });
+  it("reads lazy artwork before the library loads the image", () => {
+    document.body.innerHTML = `<div role="group" data-clip-status="complete">
+      <div role="button" aria-label="Play Lazy cover"><img src="data:image/gif;base64,R0lGODlh" data-src="https://cdn.example.test/lazy.jpeg"><span>2:42</span></div>
+      <a href="https://suno.com/song/11111111-1111-4111-8111-111111111111">Lazy cover</a>
+    </div>`;
+    const tracks = (0, eval)(`(${source("library")})`)({ site: "suno" });
+    expect(tracks[0].ArtworkUrl).toBe("https://cdn.example.test/lazy.jpeg");
   });
 });
 

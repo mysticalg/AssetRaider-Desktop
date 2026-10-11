@@ -13,7 +13,9 @@
     if (site === 'suno' && clipStatus && clipStatus !== 'complete') continue;
     const durationRoot = site === 'suno' ? row?.querySelector('[aria-label^="Play "]') || row : row;
     const duration = (durationRoot?.innerText || durationRoot?.textContent || '').match(/\b\d{1,2}:\d{2}\b/)?.[0] || '';
-    tracks.set(id, { Id: id, Title: title, Duration: duration, Site: site });
+    const image = row?.querySelector('img');
+    const artwork = image?.getAttribute('data-src') || image?.currentSrc || image?.src || '';
+    tracks.set(id, { Id: id, Title: title, Duration: duration, Site: site, ArtworkUrl: artwork.startsWith('https://') ? artwork : '' });
   }
   return [...tracks.values()];
 }

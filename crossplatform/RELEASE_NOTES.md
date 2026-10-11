@@ -1,4 +1,6 @@
-# AssetRaider 0.4.7 — music player and live spectrum
+# AssetRaider 0.4.8 — music player and live spectrum
+
+Selection-column header toggle, ascending/descending Song/Length/Status sorting, artwork thumbnails, Next, automatic advance, Shuffle and Repeat Off/All/One. Playback follows the visible sorted list; numeric durations and missing lengths sort correctly. Playing a track stops an active or paused scan and keeps tracks found.
 
 Play scanned tracks directly from the app, with pause/resume, replay, seeking and elapsed time. Chrome can remain minimized. The spectrum displays the dedicated browser's actual audio activity, including during recording. Listening writes no audio files. Scanning, changing sites and recording stop preview playback first. Unknown bitrate is omitted. Linux preview audio is routed from the private recording channel to speakers while listening.
 

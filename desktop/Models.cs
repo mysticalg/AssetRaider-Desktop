@@ -23,6 +23,7 @@ public sealed class Track : System.ComponentModel.INotifyPropertyChanged
     public string Id { get; set; } = "";
     public string Title { get; set; } = "";
     public string Duration { get; set; } = "";
+    public string ArtworkUrl { get; set; } = "";
     public string Status { get => status; set { status = value; PropertyChanged?.Invoke(this, new(nameof(Status))); } }
     public string Site { get; set; } = "udio";
     public string Key => Site + ":" + Id;

@@ -17,6 +17,14 @@ internal static class LibraryScanCheck
         Require(catalog.Matching(" NIGHT ").Single() == first, "Name search must trim and ignore case.");
         Require(catalog.Matching("sun").All(t => !t.Selected), "Hidden selections must not enter the visible recording queue.");
         Require(catalog.Matching("").Length == 2 && catalog.Matching("missing").Length == 0, "Search reset/empty results failed.");
+        first.Duration = "10:00"; first.Status = "Saved WAV";
+        var second = catalog.Matching("sun").Single(); second.Duration = "9:59"; second.Status = "Ready";
+        Require(catalog.Matching("",TrackSort.Song,true).First() == second, "Song descending order failed.");
+        Require(catalog.Matching("",TrackSort.Length).First() == second && catalog.Matching("",TrackSort.Length,true).First() == first, "Duration was sorted as text.");
+        Require(catalog.Matching("",TrackSort.Status).First() == second && first.Selected, "Status sort lost track selection.");
+        catalog.Add(new() {Id="ExampleTrack0003",Title="No duration"});
+        Require(catalog.Matching("",TrackSort.Length).Last().Duration == "" && catalog.Matching("",TrackSort.Length,true).Last().Duration == "", "Unknown lengths were not kept last.");
+        Require(catalog.Matching("sun",TrackSort.Length).Single() == second, "Sorting changed the name filter.");
 
         var source = new FakeSource();
         var control = new ScanControl();

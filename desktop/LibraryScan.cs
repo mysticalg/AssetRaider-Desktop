@@ -71,11 +71,34 @@ public static class LibraryScanner
     }
 }
 
+public enum TrackSort { None, Song, Length, Status }
+
 public sealed class LibraryCatalog
 {
     private readonly Dictionary<string, Track> tracks = [];
     public int Count => tracks.Count;
     public void Clear() => tracks.Clear();
     public bool Add(Track track) => tracks.TryAdd(track.Key, track);
-    public Track[] Matching(string? query) => tracks.Values.Where(t => t.Title.Contains((query ?? "").Trim(), StringComparison.OrdinalIgnoreCase)).ToArray();
+    public Track[] Matching(string? query, TrackSort sort = TrackSort.None, bool descending = false)
+    {
+        IEnumerable<Track> result = tracks.Values.Where(t => t.Title.Contains((query ?? "").Trim(), StringComparison.OrdinalIgnoreCase));
+        IOrderedEnumerable<Track>? ordered = sort switch {
+            TrackSort.Song => descending ? result.OrderByDescending(t => t.Title, StringComparer.CurrentCultureIgnoreCase) : result.OrderBy(t => t.Title, StringComparer.CurrentCultureIgnoreCase),
+            TrackSort.Status => descending ? result.OrderByDescending(t => t.Status, StringComparer.CurrentCultureIgnoreCase) : result.OrderBy(t => t.Status, StringComparer.CurrentCultureIgnoreCase),
+            TrackSort.Length => descending ? result.OrderBy(t => Seconds(t.Duration) == null).ThenByDescending(t => Seconds(t.Duration)) : result.OrderBy(t => Seconds(t.Duration) == null).ThenBy(t => Seconds(t.Duration)),
+            _ => null
+        };
+        return (ordered?.ThenBy(t => t.Key, StringComparer.Ordinal) ?? result).ToArray();
+    }
+    private static long? Seconds(string duration)
+    {
+        var parts = duration.Split(':');
+        if (parts.Length is < 2 or > 3) return null;
+        long total = 0;
+        for (var i = 0; i < parts.Length; i++) {
+            if (!long.TryParse(parts[i], out var part) || part < 0 || (i > 0 && part >= 60) || total > (long.MaxValue - part) / 60) return null;
+            total = total * 60 + part;
+        }
+        return total;
+    }
 }
