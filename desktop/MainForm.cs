@@ -31,7 +31,7 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "AssetRaider 0.3.5 — Udio + Suno WAV Recorder";
+        Text = "AssetRaider 0.3.6 — Udio + Suno WAV Recorder";
         MinimumSize = new Size(960, 760); Size = new Size(1160, 880);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10);

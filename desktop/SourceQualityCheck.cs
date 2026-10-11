@@ -51,6 +51,17 @@ internal static class SourceQualityCheck
             await page.GotoAsync("https://quality.assetraider.test/song/ExampleTrack0001");
             await using var monitor = await SourceQualityMonitor.AttachAsync(page);
             await page.WaitForFunctionAsync("() => song.readyState >= 2");
+            // Model a server-rendered Play button replaced by hydration after the
+            // recorder's first click. Exercise this with a real detached Audio.
+            await page.EvaluateAsync("""
+                () => {
+                    const button = document.querySelector('button'); button.onclick = null;
+                    setTimeout(() => {
+                        const ready = button.cloneNode(true);
+                        ready.onclick = () => song.play(); button.replaceWith(ready);
+                    }, 1200);
+                }
+                """);
             var duration = await page.EvaluateAsync<double>(MusicBrowser.Script("player"), new { site = "suno", id = "ExampleTrack0001" });
             var state = await BrowserData.ReadAsync<PlayerState>(page, "() => window.__assetRaiderDesktop.state()");
             SourceQuality quality = SourceQuality.Unknown;
@@ -63,7 +74,7 @@ internal static class SourceQualityCheck
             await page.EvaluateAsync("() => window.__assetRaiderDesktop.stop()");
             Require(state.Source.StartsWith("blob:"), "Integration check must use the detached blob player.");
             Require(quality.Codec == "MP3" && quality.SampleRateHz == 44100 && quality.Channels == 2 && quality.BitrateBps is >= 95000 and <= 100000, "Chrome metadata did not match the known 96 kbps / 44.1 kHz MP3: " + quality.Display);
-            File.WriteAllText(Path.Combine(directory, "quality-check.json"), JsonSerializer.Serialize(new { Passed = true, Scope = "Isolated Chrome, generated MP3 fixture, real recording player preparation", duration, quality }, new JsonSerializerOptions { WriteIndented = true }));
+            File.WriteAllText(Path.Combine(directory, "quality-check.json"), JsonSerializer.Serialize(new { Passed = true, Scope = "Isolated Chrome, generated MP3 fixture, delayed Play hydration, real recording player preparation", duration, quality }, new JsonSerializerOptions { WriteIndented = true }));
             return 0;
         }
         catch (Exception ex) { File.WriteAllText(Path.Combine(directory, "quality-check.json"), ex.ToString()); return 1; }

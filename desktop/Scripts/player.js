@@ -2,9 +2,9 @@ async ({ site = 'udio', id } = {}) => {
   window.__assetRaiderDesktop?.stop();
   const siteName = site === 'suno' ? 'Suno' : 'Udio';
   if (id && location.pathname.replace(/\/$/, '') !== (site === 'suno' ? '/song/' : '/songs/') + id) throw new Error('The page is not the selected song. Load the library and retry.');
-  const buttons = [...document.querySelectorAll(site === 'suno' ? 'button[aria-label="Play"]' : 'main button[aria-label="Play"]')].filter(b => b.getClientRects().length);
+  const playButtons = () => [...document.querySelectorAll(site === 'suno' ? 'button[aria-label="Play"]' : 'main button[aria-label="Play"]')].filter(b => b.getClientRects().length);
+  const buttons = playButtons();
   if (buttons.length !== 1) throw new Error(`The song Play button was not found uniquely. Sign into ${siteName} in the app browser, then retry.`);
-  const playButton = buttons[0];
   const proto = HTMLMediaElement.prototype;
   const originalPlay = proto.play;
   const originalPause = proto.pause;
@@ -23,12 +23,14 @@ async ({ site = 'udio', id } = {}) => {
   let oldRate = 1;
   let endedHandler;
   let preparationTimeout;
+  let preparationRetry;
   let rejectPreparation;
   let interceptPlay;
   const restore = () => {
     if (!active) return;
     active = false;
     clearTimeout(preparationTimeout);
+    clearInterval(preparationRetry);
     rejectPreparation?.(new Error('Recording preparation was stopped.'));
     rejectPreparation = undefined;
     // A cancelled preparation may settle after a retry has installed a new hook.
@@ -81,6 +83,7 @@ async ({ site = 'udio', id } = {}) => {
           // Prime metadata without audible playback, then reset before capture starts.
           this.muted = true;
           clearTimeout(preparationTimeout);
+          clearInterval(preparationRetry);
           rejectPreparation = undefined;
           resolve(this);
         } else if (this !== player) {
@@ -91,7 +94,21 @@ async ({ site = 'udio', id } = {}) => {
         return originalPlay.call(this);
       };
       proto.play = interceptPlay;
-      playButton.click();
+      // The server-rendered Play button can appear before Suno attaches its
+      // handlers. Re-query it while waiting, as hydration can replace the node.
+      // Only retry an enabled Play button: never toggle Pause or another song.
+      const requestPlay = () => {
+        if (!active || player) return;
+        if (id && location.pathname.replace(/\/$/, '') !== (site === 'suno' ? '/song/' : '/songs/') + id) {
+          reject(new Error('The page left the selected song during preparation.')); return;
+        }
+        const current = playButtons();
+        if (current.length > 1) { reject(new Error('The song Play button is no longer unique.')); return; }
+        const button = current[0];
+        if (button && !button.disabled && button.getAttribute('aria-disabled') !== 'true' && button.getAttribute('aria-busy') !== 'true') button.click();
+      };
+      preparationRetry = setInterval(requestPlay, 1000);
+      requestPlay();
     });
     const deadline = Date.now() + 25000;
     while (!(Number.isFinite(player.duration) && player.duration > 0 && player.readyState >= 2)) {

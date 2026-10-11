@@ -1,4 +1,10 @@
-# AssetRaider Desktop 0.3.5 — source audio quality
+# AssetRaider Desktop 0.3.6 — reliable playback startup
+
+Fixes a Suno startup timeout when the song's Play button appears before its click handler is ready. Preparation now rechecks the current, enabled Play button while waiting for the audio player. It stops retrying as soon as the player is found, preserves the selected-song checks, and never clicks Pause. Cancellation and failures remove the retry timer.
+
+Validation: 19 playback/scanning tests; real Chrome playback with a delayed, replaced Play button; Windows audio capture and installer checks. A live Suno cover track reproduced the old 20-second timeout and completed a 173.28-second audible stereo WAV using the patched recording queue. One earlier attempt paused and was retained as a partial file. Source quality detection remains available as described below.
+
+## Source audio quality (introduced in 0.3.5)
 
 The new **Source quality** column shows the codec, approximate stream bitrate, sample rate and channel count reported by Chrome for the exact audio player being recorded. It updates during playback and is saved in the completed-track history and terminal log. For example: `MP3 · ~97.9 kbps · 44.1 kHz · stereo`.
 

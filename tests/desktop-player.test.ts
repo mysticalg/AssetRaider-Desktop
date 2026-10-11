@@ -90,6 +90,38 @@ describe("desktop Udio playback controller", () => {
     expect(play).not.toHaveBeenCalled();
   });
 
+  it("retries Play when Suno attaches its handlers after the first click", async () => {
+    const button = document.querySelector("button")!;
+    button.onclick = null;
+    const pending = prepare({ site: "suno" });
+    await vi.advanceTimersByTimeAsync(1500);
+    button.onclick = () => { void audio.play(); };
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(await pending).toBe(120);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("finds the replacement Play button after hydration without toggling Pause", async () => {
+    document.querySelector("button")!.onclick = null;
+    const pending = prepare({ site: "suno" });
+    const replacement = document.createElement("button");
+    replacement.setAttribute("aria-label", "Pause");
+    vi.spyOn(replacement, "getClientRects").mockReturnValue({ length: 1 } as DOMRectList);
+    const click = vi.fn(() => { void audio.play(); }); replacement.onclick = click;
+    document.querySelector("button")!.replaceWith(replacement);
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(click).not.toHaveBeenCalled();
+    replacement.setAttribute("aria-label", "Play"); replacement.disabled = true;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(click).not.toHaveBeenCalled();
+    replacement.disabled = false;
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(await pending).toBe(120);
+    expect(click).toHaveBeenCalledTimes(1);
+  });
+
   it.each([true, false])("ignores Suno cover video with video-first=%s", async (videoFirst) => {
     const video = document.createElement("video"); video.muted = true;
     Object.defineProperties(video, { duration: { value: 6 }, readyState: { value: 4 }, currentSrc: { value: "https://cdn1.suno.ai/example-cover.mp4" } });
