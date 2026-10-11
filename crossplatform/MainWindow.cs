@@ -37,21 +37,32 @@ public sealed class MainWindow : Window
 
     public MainWindow()
     {
-        Title = "AssetRaider 0.4.3 beta — Udio + Suno to WAV"; Width = 1080; Height = 800; MinWidth = 850; MinHeight = 650;
-        var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto"), Margin = new Thickness(24), RowSpacing = 12 };
+        Title = "AssetRaider 0.4.4 beta — Udio + Suno to WAV"; Width = 1120; Height = 820; MinWidth = 960; MinHeight = 760;
+        Background = Brush.Parse("#101810");
+        var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto"), Margin = new Thickness(24), RowSpacing = 12 };
         void Row(Control control, int row) { Grid.SetRow(control, row); root.Children.Add(control); }
-        Row(new TextBlock { Text = "AssetRaider / Udio + Suno to WAV", FontSize = 26, FontWeight = FontWeight.Bold }, 0);
-        Row(new TextBlock { Text = "1. Sign in with normal Chrome, then close that window → 2. Open library / filters, then scan → 3. Select and record\n48 kHz / 16-bit stereo WAV · Playback speed · About 11 MB per minute", TextWrapping = TextWrapping.Wrap }, 1);
+        using var logoStream = typeof(MainWindow).Assembly.GetManifestResourceStream("AssetRaider.Brand.Icon.png")!;
+        var logo = new Avalonia.Media.Imaging.Bitmap(logoStream); Icon = new WindowIcon(logo);
+        Closed += (_, _) => logo.Dispose();
+        var header = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 16, Margin = new Thickness(0, 0, 0, 8) };
+        header.Children.Add(new Image { Source = logo, Width = 64, Height = 64 });
+        var heading = new StackPanel { Spacing = 4, VerticalAlignment = VerticalAlignment.Center };
+        heading.Children.Add(new TextBlock { Text = "AssetRaider", FontSize = 28, FontWeight = FontWeight.Bold });
+        heading.Children.Add(new TextBlock { Text = "YOUR MUSIC, SAVED LOCALLY   /   Udio + Suno playback to WAV", FontSize = 12, Foreground = Brush.Parse("#BCD49F") });
+        header.Children.Add(heading); Row(header, 0);
         var toolbar = new WrapPanel { Orientation = Orientation.Horizontal };
+        toolbar.Children.Add(new TextBlock { Text = "Music site", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 12, 0) });
         toolbar.Children.Add(site);
         toolbar.Children.Add(Button("Sign in (normal Chrome)", () => Work(async _ => { await browser.OpenLoginAsync(); SetStatus("Sign in in the separate Chrome window, then close it and click Scan library."); })));
         toolbar.Children.Add(Button("Open library / filters", () => Work(async _ => { await browser.OpenLibraryAsync(); SetStatus("Choose filters in Chrome, then Scan library. Stop or clear a scan before changing site filters."); })));
-        toolbar.Children.Add(Button("Scan library", () => Work(token => Scan(token))));
-        pauseScan.Click += (_, _) => TogglePause(); toolbar.Children.Add(pauseScan);
-        clearScan = Button("Clear scanned list", async () => await ClearScanAsync()); idle.Remove(clearScan); toolbar.Children.Add(clearScan);
-        toolbar.Children.Add(Button("Select all", () => Select(true)));
-        toolbar.Children.Add(Button("Select none", () => Select(false)));
-        Row(toolbar, 2);
+        Row(toolbar, 1);
+        var scanBar = new WrapPanel { Orientation = Orientation.Horizontal };
+        scanBar.Children.Add(Button("Scan library", () => Work(token => Scan(token))));
+        pauseScan.Click += (_, _) => TogglePause(); scanBar.Children.Add(pauseScan);
+        clearScan = Button("Clear scanned list", async () => await ClearScanAsync()); idle.Remove(clearScan); scanBar.Children.Add(clearScan);
+        scanBar.Children.Add(Button("Select all", () => Select(true)));
+        scanBar.Children.Add(Button("Select none", () => Select(false)));
+        Row(scanBar, 2);
         var searchBar = new WrapPanel { Orientation = Orientation.Horizontal };
         searchBar.Children.Add(new TextBlock { Text = "Track name  ", VerticalAlignment = VerticalAlignment.Center });
         search.TextChanged += (_, _) => RefreshTracks(); searchBar.Children.Add(search);
@@ -74,8 +85,9 @@ public sealed class MainWindow : Window
         var open = Button("Open", () => Work(_ => {
             var path = Path.GetFullPath(folder.Text ?? ""); Directory.CreateDirectory(path);
             var start = new ProcessStartInfo(OperatingSystem.IsMacOS() ? "/usr/bin/open" : "xdg-open") { UseShellExecute = false }; start.ArgumentList.Add(path); Process.Start(start)?.Dispose(); return Task.CompletedTask;
-        })); Grid.SetColumn(open, 3); destination.Children.Add(open); Row(destination, 4);
+        })); Grid.SetColumn(open, 3); destination.Children.Add(open); Row(destination, 5);
         list.ItemsSource = tracks;
+        list.Background = Brush.Parse("#192219"); list.BorderBrush = Brush.Parse("#34422E"); list.BorderThickness = new Thickness(1);
         list.ItemTemplate = new FuncDataTemplate<Track>((track, _) => {
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,2*,Auto,3*"), ColumnSpacing = 14, Margin = new Thickness(4, 7) };
             var selected = new CheckBox { VerticalAlignment = VerticalAlignment.Center }; selected.Bind(CheckBox.IsCheckedProperty, new Binding(nameof(Track.Selected)) { Source = track, Mode = BindingMode.TwoWay });
@@ -84,10 +96,13 @@ public sealed class MainWindow : Window
             var length = new TextBlock { Text = track.Duration, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(length, 2); row.Children.Add(length);
             var detail = new TextBlock { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center }; detail.Bind(TextBlock.TextProperty, new Binding(nameof(Track.Status)) { Source = track }); Grid.SetColumn(detail, 3); row.Children.Add(detail);
             return row;
-        }); Row(list, 5);
+        }); Row(list, 4);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
-        actions.Children.Add(Button("Record selected as WAV", () => Work(token => Record(token, false))));
+        var record = Button("Record selected as WAV", () => Work(token => Record(token, false)));
+        record.Background = Brush.Parse("#C9F47B"); record.Foreground = Brush.Parse("#1B2811"); record.FontWeight = FontWeight.Bold;
+        actions.Children.Add(record);
         actions.Children.Add(Button("Record again (new copy)", () => Work(token => Record(token, true)))); actions.Children.Add(stop);
+        actions.Children.Add(new TextBlock { Text = "48 kHz · 16-bit stereo WAV", FontSize = 12, Foreground = Brush.Parse("#BCD49F"), VerticalAlignment = VerticalAlignment.Center });
         stop.Click += (_, _) => { cancellation?.Cancel(); SetStatus(scanControl != null ? "Stopping scan… tracks found will be kept." : "Stopping… unfinished recordings remain partial."); }; Row(actions, 6);
         Row(status, 7); Row(progress, 8); Row(log, 9); Content = root;
         SetStatus(OperatingSystem.IsMacOS() ? "First recording: macOS will request Screen & System Audio Recording permission. Only audio from the dedicated Chrome app is requested. Keep the Mac awake during recording." : "Linux: requires PulseAudio or PipeWire-Pulse and pulseaudio-utils. The dedicated Chrome audio goes to a silent recording channel. Keep the computer awake during recording.");
@@ -95,7 +110,7 @@ public sealed class MainWindow : Window
     }
     private Button Button(string label, Action action)
     {
-        var result = new Button { Content = label, Margin = new Thickness(0, 0, 8, 0), Padding = new Thickness(12, 8) };
+        var result = new Button { Content = label, Margin = new Thickness(0, 0, 8, 0), Padding = new Thickness(12, 8), CornerRadius = new CornerRadius(5) };
         result.Click += (_, _) => action(); idle.Add(result); return result;
     }
     private void Select(bool selected) { foreach (var track in tracks) track.Selected = selected; UpdateCount(); }

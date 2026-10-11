@@ -22,6 +22,14 @@ if [[ "$rid" == osx-* ]]; then
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
   cp -a "$out/publish/." "$app/Contents/MacOS/"
   cp crossplatform/native/Info.plist "$app/Contents/Info.plist"
+  iconset="$out/AssetRaider.iconset"
+  mkdir -p "$iconset"
+  for size in 16 32 128 256 512; do
+    sips -z "$size" "$size" brand/app-icon.png --out "$iconset/icon_${size}x${size}.png" >/dev/null
+    double=$((size * 2))
+    sips -z "$double" "$double" brand/app-icon.png --out "$iconset/icon_${size}x${size}@2x.png" >/dev/null
+  done
+  iconutil -c icns "$iconset" -o "$app/Contents/Resources/AssetRaider.icns"
   # Browser-driver assets are resources, not a nested executable bundle.
   mv "$app/Contents/MacOS/.playwright" "$app/Contents/Resources/.playwright"
   for resource in "$app/Contents/MacOS/"*; do
@@ -36,13 +44,13 @@ if [[ "$rid" == osx-* ]]; then
   codesign --verify --deep --strict "$app"
   "$app/Contents/MacOS/AssetRaider.Audio" --check
   "$app/Contents/MacOS/AssetRaider" --launch-check "$out/checks"
-  ditto -c -k --sequesterRsrc --keepParent "$app" "output/releases/AssetRaider-0.4.3-$rid.zip"
+  ditto -c -k --sequesterRsrc --keepParent "$app" "output/releases/AssetRaider-0.4.4-$rid.zip"
 else
   "$out/publish/AssetRaider" --launch-check "$out/checks"
   cp scripts/install-linux.sh "$out/publish/install.sh"
   cp scripts/uninstall-linux.sh "$out/publish/uninstall.sh"
-  cp docs/favicon.svg "$out/publish/assetraider.svg"
+  cp brand/app-icon.png "$out/publish/assetraider.png"
   chmod +x "$out/publish/install.sh" "$out/publish/uninstall.sh"
-  tar -czf "output/releases/AssetRaider-0.4.3-$rid.tar.gz" -C "$out" publish --transform='s,^publish,AssetRaider,'
+  tar -czf "output/releases/AssetRaider-0.4.4-$rid.tar.gz" -C "$out" publish --transform='s,^publish,AssetRaider,'
 fi
 cat "$out/checks/launch-check.json"

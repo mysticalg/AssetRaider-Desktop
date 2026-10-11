@@ -1,13 +1,11 @@
-# AssetRaider Desktop 0.3.3 — Suno animated-cover recording fix
+# AssetRaider Desktop 0.3.4 — interface and icon refresh
 
-Fixes **A different player attempted to start** when Suno starts an animated cover video alongside song audio. The controller pauses cover videos and keeps the actual song audio as the recording timer. A different audio track still triggers protection against recording the wrong song.
+A clearer library-to-recording layout, a new waveform app icon, and a matching green Record button. Library sign-in, scan controls and track search are grouped above the list; the save folder and recording controls sit below it. The layout gives tracks more space and keeps controls visible at the minimum window size.
 
-Also fixes stop/retry cleanup: pending preparation cancels promptly, cleanup is idempotent, and an older preparation cannot remove the playback hook of a newer attempt.
+The generated icon is included in the Windows app, installer and download website. Recording output remains 48 kHz / 16-bit stereo WAV; this refresh does not change the playback or capture engine and does not add source bitrate detection.
 
-Library search, filters, pause/resume scanning and Record again (new copy) remain available. Existing WAVs and partial recordings are preserved.
+Includes the 0.3.3 fix for Suno animated covers triggering a false different-player error, plus stop/retry cleanup. Suno recording on Windows was reported working by the user on 11 October 2026. Library search, filters, pause/resume scanning, clearing scanned tracks and recording fresh copies remain available.
 
-Validation: 17 browser-script tests, including cover-video-before/after-audio, different-audio rejection and stop/retry races; live playback-controller check on the affected Suno song; app/data and installer checks. This fix does not change native audio capture. Complete WAV export of the affected song is not part of this validation.
-
-User confirmation (11 October 2026): Suno recording on Windows was reported working after this update. This feedback is separate from the automated checks above; interactive Mac capture and complete queues across both services still need testing.
+Validation: browser-script regression tests, Windows minimum-size UI rendering and clipping checks, app/data and installer checks. Mac/Linux packages have separate releases. Full signed-in queues across both services remain unverified.
 
 Windows 11 x64 and Google Chrome required. Close the running app before installing or opening the update. Runtime included; builds remain unsigned. SHA256SUMS.txt covers both downloads.

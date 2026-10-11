@@ -2,7 +2,7 @@ name: macOS and Linux packages
 on:
   push:
     branches: [main]
-    paths: ['crossplatform/**', 'desktop/**', 'scripts/*unix*', 'scripts/*linux*', '.github/workflows/unix.yml']
+    paths: ['crossplatform/**', 'desktop/**', 'brand/**', 'scripts/*unix*', 'scripts/*linux*', '.github/workflows/unix.yml']
   workflow_dispatch:
 permissions:
   contents: read

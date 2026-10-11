@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>AssetRaider</AssemblyName>
     <RootNamespace>AssetRaider.Desktop</RootNamespace>
-    <Version>0.4.3</Version>
+    <Version>0.4.4</Version>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <DebugType>none</DebugType>
   </PropertyGroup>
@@ -17,5 +17,6 @@
     <PackageReference Include="Microsoft.Playwright" Version="1.63.0" />
     <Compile Include="../desktop/Models.cs;../desktop/MusicSite.cs;../desktop/MusicBrowser.cs;../desktop/BrowserData.cs;../desktop/RecorderQueue.cs;../desktop/RecordingPolicyCheck.cs;../desktop/LibraryScan.cs;../desktop/LibraryScanCheck.cs" Link="Shared/%(Filename)%(Extension)" />
     <EmbeddedResource Include="../desktop/Scripts/*.js" LogicalName="AssetRaider.Desktop.Scripts.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="../brand/app-icon.png" LogicalName="AssetRaider.Brand.Icon.png" />
   </ItemGroup>
 </Project>

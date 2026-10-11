@@ -35,6 +35,8 @@ public sealed class App : Application
         {
             var window = new MainWindow(); desktop.MainWindow = window;
             if (Program.UiCheckDirectory is { } directory)
+            {
+                window.Width = window.MinWidth; window.Height = window.MinHeight;
                 window.Opened += (_, _) => DispatcherTimer.RunOnce(() => {
                     try
                     {
@@ -46,6 +48,7 @@ public sealed class App : Application
                     }
                     catch (Exception ex) { File.WriteAllText(Path.Combine(directory, "ui-check.json"), ex.ToString()); desktop.Shutdown(1); }
                 }, TimeSpan.FromSeconds(1));
+            }
         }
         base.OnFrameworkInitializationCompleted();
     }

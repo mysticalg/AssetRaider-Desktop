@@ -20,7 +20,7 @@ Type=Application
 Name=AssetRaider
 Comment=Udio and Suno playback to WAV
 Exec="$escaped/AssetRaider"
-Icon=$target/assetraider.svg
+Icon=$target/assetraider.png
 Terminal=false
 Categories=AudioVideo;Audio;
 EOF

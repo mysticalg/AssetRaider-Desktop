@@ -31,28 +31,38 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "AssetRaider 0.3.3 — Udio + Suno WAV Recorder";
-        MinimumSize = new Size(900, 720); Size = new Size(1150, 890);
+        Text = "AssetRaider 0.3.4 — Udio + Suno WAV Recorder";
+        MinimumSize = new Size(960, 760); Size = new Size(1160, 880);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10);
-        BackColor = Color.FromArgb(245, 247, 251);
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(22), ColumnCount = 1, RowCount = 12 };
-        layout.RowStyles.Add(new(SizeType.Absolute, 50));
-        layout.RowStyles.Add(new(SizeType.Absolute, 48));
-        layout.RowStyles.Add(new(SizeType.Absolute, 40));
-        layout.RowStyles.Add(new(SizeType.Absolute, 48));
-        layout.RowStyles.Add(new(SizeType.Absolute, 48));
-        layout.RowStyles.Add(new(SizeType.Absolute, 48));
-        layout.RowStyles.Add(new(SizeType.Absolute, 48));
+        BackColor = Color.FromArgb(242, 245, 239); ForeColor = Color.FromArgb(31, 40, 32);
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(20), ColumnCount = 1, RowCount = 10 };
+        layout.ColumnStyles.Add(new(SizeType.Percent, 100));
+        layout.RowStyles.Add(new(SizeType.Absolute, 92));
+        layout.RowStyles.Add(new(SizeType.Absolute, 46));
+        layout.RowStyles.Add(new(SizeType.Absolute, 46));
+        layout.RowStyles.Add(new(SizeType.Absolute, 46));
         layout.RowStyles.Add(new(SizeType.Percent, 100));
-        layout.RowStyles.Add(new(SizeType.Absolute, 50));
-        layout.RowStyles.Add(new(SizeType.Absolute, 58));
-        layout.RowStyles.Add(new(SizeType.Absolute, 14));
-        layout.RowStyles.Add(new(SizeType.Absolute, 105));
+        layout.RowStyles.Add(new(SizeType.Absolute, 46));
+        layout.RowStyles.Add(new(SizeType.Absolute, 52));
+        layout.RowStyles.Add(new(SizeType.Absolute, 48));
+        layout.RowStyles.Add(new(SizeType.Absolute, 10));
+        layout.RowStyles.Add(new(SizeType.Absolute, 80));
         Controls.Add(layout);
-        var heading = new Label { Text = "AssetRaider  /  Udio + Suno to WAV", Font = new Font("Segoe UI", 21, FontStyle.Bold), Dock = DockStyle.Fill };
-        layout.Controls.Add(heading);
-        layout.Controls.Add(new Label { Text = "Sign in → Open library / filters → Scan or find a track → Select and record\nStereo WAV · 48 kHz / 16-bit · Normal playback speed · About 11 MB per minute", Dock = DockStyle.Fill });
+        var header = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Padding = new Padding(12, 8, 12, 8), BackColor = Color.FromArgb(24, 31, 25), Margin = new Padding(0, 0, 0, 12) };
+        header.ColumnStyles.Add(new(SizeType.Absolute, 68)); header.ColumnStyles.Add(new(SizeType.Percent, 100));
+        header.RowCount = 1; header.RowStyles.Add(new(SizeType.Percent, 100));
+        using var logoStream = typeof(MainForm).Assembly.GetManifestResourceStream("AssetRaider.Brand.Icon.png")!;
+        using var sourceLogo = Image.FromStream(logoStream);
+        var logo = new PictureBox { Image = new Bitmap(sourceLogo), SizeMode = PictureBoxSizeMode.Zoom, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 12, 0), AccessibleName = "AssetRaider logo" };
+        logo.Disposed += (_, _) => logo.Image?.Dispose(); header.Controls.Add(logo);
+        using var iconStream = typeof(MainForm).Assembly.GetManifestResourceStream("AssetRaider.Brand.Icon.ico")!;
+        Icon = new Icon(iconStream);
+        var title = new TableLayoutPanel { Dock = DockStyle.Fill, RowCount = 2, Margin = Padding.Empty };
+        title.RowStyles.Add(new(SizeType.Absolute, 38)); title.RowStyles.Add(new(SizeType.Percent, 100));
+        title.Controls.Add(new Label { Text = "AssetRaider", Font = new Font("Segoe UI", 20, FontStyle.Bold), ForeColor = Color.FromArgb(235, 243, 223), Dock = DockStyle.Fill, Margin = Padding.Empty });
+        title.Controls.Add(new Label { Text = "YOUR MUSIC, SAVED LOCALLY   /   Udio + Suno playback to WAV", Font = new Font("Segoe UI", 9), ForeColor = Color.FromArgb(191, 211, 171), Dock = DockStyle.Fill, Margin = Padding.Empty });
+        header.Controls.Add(title); layout.Controls.Add(header, 0, 0);
         var siteBar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
         siteBar.Controls.Add(new Label { Text = "Music site", AutoSize = true, Margin = new Padding(0, 7, 10, 0) });
         sitePicker.DropDownStyle = ComboBoxStyle.DropDownList; sitePicker.Width = 135;
@@ -63,43 +73,46 @@ public sealed class MainForm : Form
             SetStatus($"{browser.Site.Name} selected. Sign in once, then Scan library. Open library / filters to choose your view, then Scan library.");
         });
         siteBar.Controls.Add(sitePicker);
-        siteBar.Controls.Add(new Label { Text = "Select all and recording apply to the tracks visible in your search.", AutoSize = true, Margin = new Padding(14, 7, 0, 0) });
-        layout.Controls.Add(siteBar);
-        var connect = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
-        connect.Controls.Add(MakeButton("1  Sign in (normal Chrome)", () => Work(async _ => { await browser.OpenLoginAsync(); SetStatus($"Sign into {browser.Site.Name} in the normal Chrome window. Once your songs are visible, CLOSE that separate Chrome window, then click Scan library. Login runs without automation."); })));
-        connect.Controls.Add(MakeButton("Open library / filters", () => Work(async _ => { await browser.OpenLibraryAsync(); SetStatus("Choose filters in Chrome, then click Scan library. Stop or clear an existing scan before changing site filters."); })));
-        layout.Controls.Add(connect);
+        siteBar.Controls.Add(MakeButton("Sign in (normal Chrome)", () => Work(async _ => { await browser.OpenLoginAsync(); SetStatus($"Sign into {browser.Site.Name} in the normal Chrome window. Once your songs are visible, CLOSE that separate Chrome window, then click Scan library. Login runs without automation."); })));
+        siteBar.Controls.Add(MakeButton("Open library / filters", () => Work(async _ => { await browser.OpenLibraryAsync(); SetStatus("Choose filters in Chrome, then click Scan library. Stop or clear an existing scan before changing site filters."); })));
+        layout.Controls.Add(siteBar, 0, 1);
         var scanBar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
         scanBar.Controls.Add(MakeButton("Scan library", () => Work(token => Scan(token))));
-        pauseScan.Click += (_, _) => TogglePause(); scanBar.Controls.Add(pauseScan);
+        StyleButton(pauseScan); pauseScan.Click += (_, _) => TogglePause(); scanBar.Controls.Add(pauseScan);
         clearScan = MakeButton("Clear scanned list", async () => await ClearScanAsync()); idleButtons.Remove(clearScan); scanBar.Controls.Add(clearScan);
         scanBar.Controls.Add(MakeButton("Select all", () => SelectTracks(true)));
         scanBar.Controls.Add(MakeButton("Select none", () => SelectTracks(false)));
-        layout.Controls.Add(scanBar);
+        layout.Controls.Add(scanBar, 0, 2);
         var searchBar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
         searchBar.Controls.Add(new Label { Text = "Track name", AutoSize = true, Margin = new Padding(0, 7, 8, 0) });
         search.TextChanged += (_, _) => RefreshTracks(); searchBar.Controls.Add(search);
         searchBar.Controls.Add(MakeButton("Find in library", () => Work(token => Scan(token, true))));
         search.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; Work(token => Scan(token, true)); } };
         count.AutoSize = true; count.Margin = new Padding(12, 7, 0, 0); searchBar.Controls.Add(count);
-        layout.Controls.Add(searchBar);
+        layout.Controls.Add(searchBar, 0, 3);
         var destination = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4 };
         destination.ColumnStyles.Add(new(SizeType.Absolute, 68)); destination.ColumnStyles.Add(new(SizeType.Percent, 100));
-        destination.ColumnStyles.Add(new(SizeType.Absolute, 94)); destination.ColumnStyles.Add(new(SizeType.Absolute, 100));
+        destination.ColumnStyles.Add(new(SizeType.Absolute, 110)); destination.ColumnStyles.Add(new(SizeType.Absolute, 125));
         destination.Controls.Add(new Label { Text = "Save to", AutoSize = true, Margin = new Padding(0, 9, 0, 0) });
         folder.Dock = DockStyle.Fill;
         folder.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "AssetRaider");
         try { if (File.Exists(SettingsPath)) folder.Text = JsonSerializer.Deserialize<string>(File.ReadAllText(SettingsPath)) ?? folder.Text; } catch { }
         destination.Controls.Add(folder);
         destination.Controls.Add(MakeButton("Browse…", () => { using var dialog = new FolderBrowserDialog { InitialDirectory = folder.Text }; if (dialog.ShowDialog(this) == DialogResult.OK) folder.Text = dialog.SelectedPath; }));
-        destination.Controls.Add(MakeButton("Open folder", () => { try { Directory.CreateDirectory(folder.Text); Process.Start(new ProcessStartInfo(folder.Text) { UseShellExecute = true }); } catch (Exception e) { SetStatus(e.Message); } }));
-        layout.Controls.Add(destination);
+        destination.Controls.Add(MakeButton("Open", () => { try { Directory.CreateDirectory(folder.Text); Process.Start(new ProcessStartInfo(folder.Text) { UseShellExecute = true }); } catch (Exception e) { SetStatus(e.Message); } }));
+        layout.Controls.Add(destination, 0, 5);
         grid.Dock = DockStyle.Fill; grid.AutoGenerateColumns = false; grid.AllowUserToAddRows = false; grid.AllowUserToDeleteRows = false;
         grid.RowHeadersVisible = false; grid.BackgroundColor = Color.White; grid.BorderStyle = BorderStyle.None;
         grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect; grid.MultiSelect = false;
         grid.AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells; grid.RowTemplate.Height = 34;
-        grid.EnableHeadersVisualStyles = false; grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(226, 232, 242);
-        grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(248, 250, 253);
+        grid.EnableHeadersVisualStyles = false; grid.ColumnHeadersDefaultCellStyle.BackColor = Color.FromArgb(222, 231, 216);
+        grid.ColumnHeadersDefaultCellStyle.ForeColor = ForeColor; grid.ColumnHeadersHeight = 36;
+        grid.ColumnHeadersDefaultCellStyle.Padding = new Padding(5, 0, 5, 0);
+        grid.ColumnHeadersDefaultCellStyle.SelectionBackColor = grid.ColumnHeadersDefaultCellStyle.BackColor;
+        grid.DefaultCellStyle.Padding = new Padding(5, 7, 5, 7);
+        grid.DefaultCellStyle.SelectionBackColor = Color.FromArgb(220, 240, 194); grid.DefaultCellStyle.SelectionForeColor = ForeColor;
+        grid.GridColor = Color.FromArgb(230, 236, 225); grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
+        grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(249, 251, 246);
         grid.Columns.Add(new DataGridViewCheckBoxColumn { DataPropertyName = nameof(Track.Selected), HeaderText = "✓", Width = 44 });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Title), HeaderText = "Song", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 45, ReadOnly = true });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Duration), HeaderText = "Length", Width = 70, ReadOnly = true });
@@ -107,29 +120,39 @@ public sealed class MainForm : Form
         grid.DataSource = tracks;
         grid.CurrentCellDirtyStateChanged += (_, _) => { if (grid.IsCurrentCellDirty) grid.CommitEdit(DataGridViewDataErrorContexts.Commit); };
         grid.CellValueChanged += (_, _) => UpdateCount();
-        layout.Controls.Add(grid);
+        layout.Controls.Add(grid, 0, 4);
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(0, 7, 0, 0) };
-        var record = MakeButton("3  Record selected as WAV", () => Work(token => Record(token, false)));
-        record.BackColor = Color.FromArgb(47, 75, 190); record.ForeColor = Color.White; actions.Controls.Add(record);
+        var record = MakeButton("Record selected as WAV", () => Work(token => Record(token, false)));
+        record.BackColor = Color.FromArgb(201, 244, 123); record.ForeColor = Color.FromArgb(27, 40, 17); record.Font = new Font(Font, FontStyle.Bold); actions.Controls.Add(record);
         actions.Controls.Add(MakeButton("Record again (new copy)", () => Work(token => Record(token, true))));
-        stop.Text = "Stop"; stop.AutoSize = true; stop.Height = 34; stop.Enabled = false;
+        stop.Text = "Stop"; StyleButton(stop); stop.Enabled = false;
         stop.Click += (_, _) => { cancellation?.Cancel(); SetStatus(scanControl != null ? "Stopping scan… tracks found will be kept." : "Stopping… any unfinished recording will be kept as a partial WAV."); };
         actions.Controls.Add(stop);
-        layout.Controls.Add(actions);
+        actions.Controls.Add(new Label { Text = "48 kHz · 16-bit stereo WAV", AutoSize = true, ForeColor = Color.FromArgb(80, 99, 67), Margin = new Padding(8, 10, 0, 0), Font = new Font("Segoe UI", 9) });
+        layout.Controls.Add(actions, 0, 6);
         status.Dock = DockStyle.Fill; status.AutoEllipsis = true; status.Text = "Sign in once, then Open library / filters and Scan library. Type a name to filter scanned tracks; Find in library searches Suno directly.";
-        layout.Controls.Add(status);
-        progress.Dock = DockStyle.Fill; layout.Controls.Add(progress);
+        layout.Controls.Add(status, 0, 7);
+        progress.Dock = DockStyle.Fill; layout.Controls.Add(progress, 0, 8);
         log.Dock = DockStyle.Fill; log.Multiline = true; log.ReadOnly = true; log.ScrollBars = ScrollBars.Vertical;
-        log.BackColor = Color.White; log.BorderStyle = BorderStyle.FixedSingle; layout.Controls.Add(log);
+        log.BackColor = Color.FromArgb(233, 239, 227); log.ForeColor = Color.FromArgb(64, 77, 56); log.Font = new Font("Consolas", 9); log.BorderStyle = BorderStyle.None; layout.Controls.Add(log, 0, 9);
+        var tips = new ToolTip(); tips.SetToolTip(record, "Record visible selected tracks. Output: 48 kHz / 16-bit stereo WAV, about 11 MB per minute. Source quality is unchanged.");
+        tips.SetToolTip(search, "Filter scanned tracks by name. Find in library searches Suno directly. Select all applies to visible matches.");
+        Disposed += (_, _) => tips.Dispose();
+        foreach (var bar in layout.Controls.OfType<FlowLayoutPanel>()) bar.Margin = Padding.Empty;
         UpdateCount();
         FormClosing += OnClosing;
     }
 
     private Button MakeButton(string text, Action action)
     {
-        var button = new Button { Text = text, AutoSize = true, Height = 34, FlatStyle = FlatStyle.Flat, Padding = new Padding(7, 3, 7, 3), BackColor = Color.White };
-        button.FlatAppearance.BorderColor = Color.FromArgb(210, 216, 228);
+        var button = new Button { Text = text }; StyleButton(button);
         button.Click += (_, _) => action(); idleButtons.Add(button); return button;
+    }
+    private static void StyleButton(Button button)
+    {
+        button.AutoSize = true; button.Height = 34; button.FlatStyle = FlatStyle.Flat;
+        button.Padding = new Padding(7, 2, 7, 2); button.BackColor = Color.White;
+        button.Margin = new Padding(0, 2, 8, 2); button.FlatAppearance.BorderColor = Color.FromArgb(200, 213, 190);
     }
     private void UpdateCount() => count.Text = $"{tracks.Count(t => t.Selected)} selected / {tracks.Count} shown / {catalog.Count} scanned";
     private void RefreshTracks()
@@ -229,6 +252,10 @@ public sealed class MainForm : Form
         bitmap.Save(Path.Combine(directory, "app.png"));
         if (pauseScan.Bottom > pauseScan.Parent!.ClientSize.Height || clearScan.Right > clearScan.Parent!.ClientSize.Width)
             throw new Exception($"Scan controls clipped: pause bottom {pauseScan.Bottom}, bar height {pauseScan.Parent.ClientSize.Height}, clear right {clearScan.Right}, bar width {clearScan.Parent!.ClientSize.Width}.");
+        foreach (var bar in Controls.OfType<TableLayoutPanel>().SelectMany(p => p.Controls.OfType<FlowLayoutPanel>()))
+            foreach (Control child in bar.Controls)
+                if (child.Right > bar.ClientSize.Width || child.Bottom > bar.ClientSize.Height)
+                    throw new Exception($"Control clipped at minimum size: {child.Text}");
         File.WriteAllText(Path.Combine(directory, "ui-check.json"), "{\"Passed\":true,\"Checks\":\"Name filter, hidden selection, reset and minimum-size controls\"}");
         closing = true; Close();
     }

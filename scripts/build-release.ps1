@@ -1,7 +1,7 @@
 param([string]$Dotnet = 'dotnet')
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path $PSScriptRoot -Parent
-$version = '0.3.3'
+$version = '0.3.4'
 & (Join-Path $PSScriptRoot 'build-desktop.ps1') -Dotnet $Dotnet
 $release = Join-Path $repoRoot 'output\releases'
 New-Item -ItemType Directory -Path $release -Force | Out-Null
