@@ -1,4 +1,7 @@
-# AssetRaider 0.4.2 beta — macOS and Linux
+# AssetRaider 0.4.3 beta — macOS and Linux
+
+This update fixes Suno recordings failing with **A different player attempted to start** when animated cover art plays beside the song. The cover video is kept paused during capture, while the song audio remains the recording timer. Stopping preparation now cancels it promptly, and old cleanup cannot remove a retry's playback hook. Protection against a genuinely different audio track remains enabled.
+
 
 ## Library scanning and track-name search
 
@@ -26,7 +29,7 @@ Choose Udio or Suno, sign in using normal Chrome, close the sign-in window, load
 
 - **x86-64**, Ubuntu 22.04/24.04 or a comparable glibc desktop with X11/XWayland, ICU, libX11, libICE, libSM, fontconfig, libGL, and Google Chrome's native `.deb`/`.rpm` package. Snap/Flatpak Chrome profiles are not supported.
 - Requires a running **PulseAudio or PipeWire-Pulse** sound server, plus `pactl` and `parec`. On Debian/Ubuntu install `pulseaudio-utils`; on Fedora install `pulseaudio-utils`. The app does not replace or reconfigure your default sound server.
-- Extract `AssetRaider-0.4.2-linux-x64.tar.gz`. Run `AssetRaider/AssetRaider`, or run `bash AssetRaider/install.sh` for a per-user installation and applications-menu entry. No .NET installation or root access is required by AssetRaider itself.
+- Extract `AssetRaider-0.4.3-linux-x64.tar.gz`. Run `AssetRaider/AssetRaider`, or run `bash AssetRaider/install.sh` for a per-user installation and applications-menu entry. No .NET installation or root access is required by AssetRaider itself.
 - Recording mode creates a dedicated virtual sink and routes only its Chrome process to it. **That browser's playback is intentionally silent on Linux** while it records. Your microphone and normal desktop output are not captured.
 - Use `~/.local/share/AssetRaiderApp/uninstall.sh` to remove an installed copy. Recordings and browser sign-ins are preserved. A portable copy can be removed by deleting its extracted app folder.
 

@@ -22,9 +22,17 @@ async ({ site = 'udio', id } = {}) => {
   let oldLoop = false;
   let oldRate = 1;
   let endedHandler;
+  let preparationTimeout;
+  let rejectPreparation;
+  let interceptPlay;
   const restore = () => {
+    if (!active) return;
     active = false;
-    proto.play = originalPlay;
+    clearTimeout(preparationTimeout);
+    rejectPreparation?.(new Error('Recording preparation was stopped.'));
+    rejectPreparation = undefined;
+    // A cancelled preparation may settle after a retry has installed a new hook.
+    if (proto.play === interceptPlay) proto.play = originalPlay;
     if (player) {
       originalPause.call(player);
       player.removeEventListener('ended', endedHandler, true);
@@ -38,6 +46,7 @@ async ({ site = 'udio', id } = {}) => {
     stop: restore,
     start: async () => {
       if (!active || !player) throw new Error('The prepared player was lost.');
+      if (error) throw new Error(error);
       started = true;
       lastAdvance = Date.now();
       await originalPlay.call(player);
@@ -55,25 +64,33 @@ async ({ site = 'udio', id } = {}) => {
   };
   try {
     player = await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error(`${siteName} did not load its audio player within 20 seconds.`)), 20000);
-      proto.play = function() {
+      rejectPreparation = reject;
+      preparationTimeout = setTimeout(() => reject(new Error(`${siteName} did not load its audio player within 20 seconds.`)), 20000);
+      interceptPlay = function() {
+        if (done || !active) { originalPause.call(this); return Promise.resolve(); }
+        // Suno starts an animated cover VIDEO beside the separate song AUDIO.
+        // Keep the cover still during capture; it must never become the song timer
+        // or trigger the protection against a second audio track.
+        if (site === 'suno' && this.tagName === 'VIDEO') { originalPause.call(this); return Promise.resolve(); }
         // Suno also plays a 100 ms silent clip to keep its audio session alive.
         // It is not the selected song and must never become the recording timer.
         if (site === 'suno' && /\/sil-\d+\.mp3(?:\?|$)/.test(this.currentSrc || this.src)) return originalPlay.call(this);
-        if (done || !active) { originalPause.call(this); return Promise.resolve(); }
         if (!player) {
           player = this;
           oldVolume = this.volume; oldMuted = this.muted; oldLoop = this.loop; oldRate = this.playbackRate;
           // Prime metadata without audible playback, then reset before capture starts.
           this.muted = true;
-          clearTimeout(timeout);
+          clearTimeout(preparationTimeout);
+          rejectPreparation = undefined;
           resolve(this);
         } else if (this !== player) {
+          originalPause.call(this);
           error = 'A different player attempted to start.';
           return Promise.resolve();
         }
         return originalPlay.call(this);
       };
+      proto.play = interceptPlay;
       playButton.click();
     });
     const deadline = Date.now() + 25000;
@@ -86,9 +103,11 @@ async ({ site = 'udio', id } = {}) => {
     if (duration > 1800) throw new Error('This version supports tracks up to 30 minutes.');
     player.loop = false; player.playbackRate = 1; player.currentTime = 0;
     while (player.seeking || player.currentTime > .05) {
+      if (!active) throw new Error('Recording preparation was stopped.');
       if (Date.now() > deadline) throw new Error('Could not rewind the song to its start.');
       await new Promise(r => setTimeout(r, 50));
     }
+    if (!active) throw new Error('Recording preparation was stopped.');
     src = player.currentSrc || player.src;
     player.volume = 1; player.muted = false;
     endedHandler = event => { done = true; originalPause.call(player); event.stopImmediatePropagation(); };

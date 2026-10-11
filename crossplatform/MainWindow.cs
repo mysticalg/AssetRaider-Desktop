@@ -37,7 +37,7 @@ public sealed class MainWindow : Window
 
     public MainWindow()
     {
-        Title = "AssetRaider 0.4.2 beta — Udio + Suno to WAV"; Width = 1080; Height = 800; MinWidth = 850; MinHeight = 650;
+        Title = "AssetRaider 0.4.3 beta — Udio + Suno to WAV"; Width = 1080; Height = 800; MinWidth = 850; MinHeight = 650;
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto"), Margin = new Thickness(24), RowSpacing = 12 };
         void Row(Control control, int row) { Grid.SetRow(control, row); root.Children.Add(control); }
         Row(new TextBlock { Text = "AssetRaider / Udio + Suno to WAV", FontSize = 26, FontWeight = FontWeight.Bold }, 0);

@@ -1,4 +1,7 @@
-# AssetRaider desktop — Udio + Suno WAV recorder (0.3.2)
+# AssetRaider desktop — Udio + Suno WAV recorder (0.3.3)
+
+This update fixes Suno recordings failing with **A different player attempted to start** when animated cover art plays beside the song. The cover video is kept paused during capture, while the song audio remains the recording timer. Stopping preparation now cancels it promptly, and old cleanup cannot remove a retry's playback hook. Protection against a genuinely different audio track remains enabled.
+
 
 ## Library scanning and track-name search
 
@@ -10,7 +13,7 @@
 - **Clear scanned list** stops any scan, waits for its current step, then clears the app's results. It never deletes WAVs or completion history. **Stop** ends the scan but keeps tracks found. To change the site's filters mid-scan, Stop or Clear first, change them in Chrome, then start a fresh scan.
 
 
-Run `AssetRaider.exe` from the portable output folder, or `Run AssetRaider.cmd` in the repository. Keep all files in the output folder together, including the hidden `.playwright` directory. No extension or .NET installation is needed for the published Windows x64 build. Google Chrome and Windows 11 are required (the underlying process capture API needs Windows build 20348+). Version 0.3.2 also fixes the “Return type mismatch … ScrollState” library-loading error and applies the same conversion fix to track lists and playback progress.
+Run `AssetRaider.exe` from the portable output folder, or `Run AssetRaider.cmd` in the repository. Keep all files in the output folder together, including the hidden `.playwright` directory. No extension or .NET installation is needed for the published Windows x64 build. Google Chrome and Windows 11 are required (the underlying process capture API needs Windows build 20348+). Version 0.3.3 also fixes the “Return type mismatch … ScrollState” library-loading error and applies the same conversion fix to track lists and playback progress.
 
 1. Choose **Udio** or **Suno** in the **Music site** selector. Click **Sign in (normal Chrome)**. Sign in normally in the separate Chrome window, with no browser automation connected. Once your songs appear, **close that separate Chrome window** so Chrome saves your login. The app does not import your usual browser profile or ask for your password. Google can reject sign-in in an automated browser, so authentication has its own ordinary Chrome step.
 2. Click **Scan library**. The app reopens that site's local profile for recording and scrolls through the current library view. For Suno, it scans the selected library view or Create workspace, including previous/next pages; it does not switch workspaces automatically. Udio filters and folders and Suno workspace filters affect which tracks appear. Select a different workspace in the app's Chrome window and Scan library again to scan it. A stopped scan keeps the tracks already found. On subsequent launches, go straight to Scan library if your login is still valid.
@@ -32,7 +35,7 @@ With the .NET 10 SDK installed:
 
 ```powershell
 ./scripts/build-desktop.ps1
-$check = Start-Process ./output/desktop-0.3.2/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
+$check = Start-Process ./output/desktop-0.3.3/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
 Get-Content C:\Temp\AssetRaiderTest\self-test.json
 ```
 

@@ -86,6 +86,45 @@ describe("desktop Udio playback controller", () => {
     await expect(prepare({ site: "suno" })).rejects.toThrow("uniquely");
     expect(play).not.toHaveBeenCalled();
   });
+
+  it.each([true, false])("ignores Suno cover video with video-first=%s", async (videoFirst) => {
+    const video = document.createElement("video"); video.muted = true;
+    Object.defineProperties(video, { duration: { value: 6 }, readyState: { value: 4 }, currentSrc: { value: "https://cdn1.suno.ai/example-cover.mp4" } });
+    document.querySelector("button")!.onclick = () => {
+      if (videoFirst) void video.play();
+      void audio.play();
+      if (!videoFirst) void video.play();
+    };
+    expect(await prepare({ site: "suno" })).toBe(120);
+    await api().start(); await video.play();
+    audio.currentTime = 2;
+    expect(api().state()).toMatchObject({ Duration: 120, Elapsed: 2, Error: "" });
+    expect(play).toHaveBeenCalledTimes(2); // Only the song was primed and started.
+    expect(video.muted).toBe(true);
+  });
+
+  it("still blocks a genuinely different audio player", async () => {
+    await prepare({ site: "suno" }); await api().start();
+    await document.createElement("audio").play();
+    expect(api().state().Error).toContain("different player");
+    expect(play).toHaveBeenCalledTimes(2);
+  });
+
+  it("cancels a pending prepare immediately without an old cleanup breaking the retry", async () => {
+    document.querySelector("button")!.onclick = null;
+    const stopped = prepare({ site: "suno" });
+    const rejected = expect(stopped).rejects.toThrow("stopped");
+    const old = api(); old.stop();
+    document.querySelector("button")!.onclick = () => { void audio.play(); };
+    const next = prepare({ site: "suno" });
+    await rejected; expect(await next).toBe(120);
+    old.stop(); // Must be idempotent, even after another controller starts.
+    await api().start();
+    await document.createElement("audio").play();
+    expect(api().state().Error).toContain("different player");
+    api().stop(); expect(HTMLMediaElement.prototype.play).toBe(play);
+    expect(vi.getTimerCount()).toBe(0);
+  });
 });
 
 describe("desktop library scanning", () => {

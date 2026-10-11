@@ -1,13 +1,11 @@
-# AssetRaider Desktop 0.3.2 — library search and scan controls
+# AssetRaider Desktop 0.3.3 — Suno animated-cover recording fix
 
-- Suno opens the user's library at `https://suno.com/me`. **Open library / filters** lets you choose site filters before scanning.
-- Type a track name to filter scanned results immediately. **Find in library** searches Suno directly and scans matching results; Udio scans the current view and applies the name filter locally.
-- **Pause scan / Resume scan** retains your position. **Clear scanned list** safely stops scanning and clears results without deleting recordings.
-- Fresh scans replace stale results. Select all and recording apply to visible matches only.
-- Updated pagination for Suno's current library arrows. Existing repeat-recording and WAV preservation remain available.
+Fixes **A different player attempted to start** when Suno starts an animated cover video alongside song audio. The controller pauses cover videos and keeps the actual song audio as the recording timer. A different audio track still triggers protection against recording the wrong song.
 
-Windows 11 x64 and Google Chrome required. The runtime is bundled; builds remain unsigned. Close the old app before installing the update.
+Also fixes stop/retry cleanup: pending preparation cancels promptly, cleanup is idempotent, and an older preparation cannot remove the playback hook of a newer attempt.
 
-Validation: name search and current pagination inspected in a signed-in Suno library; 13 browser-script tests; shared scan tests for pause/resume, page deduplication, cancellation and late-result rejection; Windows interface search/layout checks; app and installer checks. Full signed-in recording queues remain outside this update's validation.
+Library search, filters, pause/resume scanning and Record again (new copy) remain available. Existing WAVs and partial recordings are preserved.
 
-SHA256SUMS.txt covers the installer and portable ZIP.
+Validation: 17 browser-script tests, including cover-video-before/after-audio, different-audio rejection and stop/retry races; live playback-controller check on the affected Suno song; app/data and installer checks. This fix does not change native audio capture. Complete WAV export of the affected song is not part of this validation.
+
+Windows 11 x64 and Google Chrome required. Close the running app before installing or opening the update. Runtime included; builds remain unsigned. SHA256SUMS.txt covers both downloads.
