@@ -8,4 +8,6 @@ Library search, filters, pause/resume scanning and Record again (new copy) remai
 
 Validation: 17 browser-script tests, including cover-video-before/after-audio, different-audio rejection and stop/retry races; live playback-controller check on the affected Suno song; app/data and installer checks. This fix does not change native audio capture. Complete WAV export of the affected song is not part of this validation.
 
+User confirmation (11 October 2026): Suno recording on Windows was reported working after this update. This feedback is separate from the automated checks above; interactive Mac capture and complete queues across both services still need testing.
+
 Windows 11 x64 and Google Chrome required. Close the running app before installing or opening the update. Runtime included; builds remain unsigned. SHA256SUMS.txt covers both downloads.
