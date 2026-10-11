@@ -4,7 +4,7 @@ using Microsoft.Playwright;
 
 namespace AssetRaider.Desktop;
 
-public sealed record PlayerState(double Duration, double Elapsed, bool Done, string Error, string Source = "");
+public sealed record PlayerState(double Duration, double Elapsed, bool Done, string Error, string Source = "", bool Paused = false);
 public sealed record ScrollState(bool Bottom, double Position);
 public sealed record PageChange(bool Changed, string Error);
 
@@ -155,7 +155,9 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
         return result.Changed;
     }
 
-    public async Task<double> PrepareAsync(Track track, CancellationToken cancellation)
+    public Task<double> PrepareAsync(Track track, CancellationToken cancellation) => PreparePlayerAsync(track, cancellation, false);
+    public Task<double> PreparePreviewAsync(Track track, CancellationToken cancellation) => PreparePlayerAsync(track, cancellation, true);
+    private async Task<double> PreparePlayerAsync(Track track, CancellationToken cancellation, bool preview)
     {
         _ = RecordingLibrary.SafeName(track);
         if (track.Site != Site.Id) throw new IOException("The selected song belongs to another site. Load this site's library again.");
@@ -169,11 +171,13 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
         await tab.GotoAsync(track.Url, new() { WaitUntil = WaitUntilState.DOMContentLoaded });
         await tab.Locator(Site.PlaySelector + ":visible").First.WaitForAsync();
         cancellation.ThrowIfCancellationRequested();
-        var duration = await tab.EvaluateAsync<double>(Script("player"), new { site = Site.Id, id = track.Id }).WaitAsync(cancellation);
+        var duration = await tab.EvaluateAsync<double>(Script("player"), new { site = Site.Id, id = track.Id, preview }).WaitAsync(cancellation);
         await StateAsync().WaitAsync(cancellation);
         return duration;
     }
     public Task StartAsync() => Page.EvaluateAsync("() => window.__assetRaiderDesktop.start()");
+    public Task PausePlaybackAsync() => Page.EvaluateAsync("() => window.__assetRaiderDesktop.pause()");
+    public Task SeekPlaybackAsync(double seconds) => Page.EvaluateAsync("seconds => window.__assetRaiderDesktop.seek(seconds)", seconds);
     public async Task<PlayerState> StateAsync()
     {
         var state = await BrowserData.ReadAsync<PlayerState>(Page, "() => window.__assetRaiderDesktop.state()");

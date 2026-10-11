@@ -9,13 +9,16 @@ public sealed class Track : System.ComponentModel.INotifyPropertyChanged
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     private bool selected;
     private string status = "Ready";
+    private string playbackAction = "Play";
+    [System.Text.Json.Serialization.JsonIgnore]
+    public string PlaybackAction { get => playbackAction; set { if (playbackAction == value) return; playbackAction = value; PropertyChanged?.Invoke(this, new(nameof(PlaybackAction))); } }
     private SourceQuality? sourceQuality;
     public SourceQuality? SourceQuality
     {
         get => sourceQuality;
         set { if (sourceQuality == value) return; sourceQuality = value; PropertyChanged?.Invoke(this, new(nameof(SourceQualityText))); }
     }
-    public string SourceQualityText => SourceQuality?.Display ?? "Detected during recording";
+    public string SourceQualityText => SourceQuality?.Display ?? "Detected on playback";
     public bool Selected { get => selected; set { selected = value; PropertyChanged?.Invoke(this, new(nameof(Selected))); } }
     public string Id { get; set; } = "";
     public string Title { get; set; } = "";

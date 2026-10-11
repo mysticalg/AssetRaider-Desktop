@@ -8,12 +8,21 @@ using Avalonia.Data;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 
 namespace AssetRaider.Desktop;
 
 public sealed class MainWindow : Window
 {
     private readonly MusicBrowser browser = new();
+    private readonly PreviewPlayer player;
+    private readonly TextBlock nowPlaying = new() { Text = "Music player · click Play beside a track · Chrome can stay minimized", TextTrimming = TextTrimming.CharacterEllipsis };
+    private readonly TextBlock playbackTime = new() { Text = "0:00 / 0:00", VerticalAlignment = VerticalAlignment.Center };
+    private readonly Button playbackToggle = new() { Content = "Pause", IsEnabled = false };
+    private readonly Button playbackStop = new() { Content = "Stop player", IsEnabled = false };
+    private readonly Slider playbackSeek = new() { Minimum = 0, Maximum = 1000, IsEnabled = false };
+    private readonly DispatcherTimer playerTimer = new() { Interval = TimeSpan.FromMilliseconds(250) };
+    private bool playerBusy, pollingPlayer, seekingPlayer;
     private readonly ObservableCollection<Track> tracks = [];
     private readonly LibraryCatalog catalog = new();
     private readonly TextBox search = new() { Width = 270, Watermark = "Type a track name…" };
@@ -37,9 +46,10 @@ public sealed class MainWindow : Window
 
     public MainWindow()
     {
-        Title = "AssetRaider 0.4.6 beta — Udio + Suno to WAV"; Width = 1120; Height = 820; MinWidth = 960; MinHeight = 760;
+        player = new(browser);
+        Title = "AssetRaider 0.4.7 beta — Udio + Suno to WAV"; Width = 1120; Height = 960; MinWidth = 960; MinHeight = 840;
         Background = Brush.Parse("#101810");
-        var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto"), Margin = new Thickness(24), RowSpacing = 12 };
+        var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto,Auto,Auto"), Margin = new Thickness(24), RowSpacing = 10 };
         void Row(Control control, int row) { Grid.SetRow(control, row); root.Children.Add(control); }
         using var logoStream = typeof(MainWindow).Assembly.GetManifestResourceStream("AssetRaider.Brand.Icon.png")!;
         var logo = new Avalonia.Media.Imaging.Bitmap(logoStream); Icon = new WindowIcon(logo);
@@ -85,30 +95,45 @@ public sealed class MainWindow : Window
         var open = Button("Open", () => Work(_ => {
             var path = Path.GetFullPath(folder.Text ?? ""); Directory.CreateDirectory(path);
             var start = new ProcessStartInfo(OperatingSystem.IsMacOS() ? "/usr/bin/open" : "xdg-open") { UseShellExecute = false }; start.ArgumentList.Add(path); Process.Start(start)?.Dispose(); return Task.CompletedTask;
-        })); Grid.SetColumn(open, 3); destination.Children.Add(open); Row(destination, 5);
+        })); Grid.SetColumn(open, 3); destination.Children.Add(open); Row(destination, 7);
         list.ItemsSource = tracks;
         list.Background = Brush.Parse("#192219"); list.BorderBrush = Brush.Parse("#34422E"); list.BorderThickness = new Thickness(1);
-        list.ItemTemplate = new FuncDataTemplate<Track>((track, _) => {
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,2*,Auto,2*,2*"), ColumnSpacing = 14, Margin = new Thickness(4, 7) };
+        list.ItemTemplate = new FuncDataTemplate<Track>((track, scope) => {
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,82,2*,Auto,2*,2*"), ColumnSpacing = 10, Margin = new Thickness(4, 7) };
             var selected = new CheckBox { VerticalAlignment = VerticalAlignment.Center }; selected.Bind(CheckBox.IsCheckedProperty, new Binding(nameof(Track.Selected)) { Source = track, Mode = BindingMode.TwoWay });
             row.Children.Add(selected);
-            var name = new TextBlock { Text = track.Title, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(name, 1); row.Children.Add(name);
-            var length = new TextBlock { Text = track.Duration, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(length, 2); row.Children.Add(length);
+            var play = new Button { Padding = new Thickness(8, 5), HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Center };
+            play.Bind(Avalonia.Controls.Button.ContentProperty, new Binding(nameof(Track.PlaybackAction)) { Source = track }); play.Click += (_, _) => _ = PlayTrackAsync(track);
+            Grid.SetColumn(play, 1); row.Children.Add(play);
+            var name = new TextBlock { Text = track.Title, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(name, 2); row.Children.Add(name);
+            var length = new TextBlock { Text = track.Duration, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(length, 3); row.Children.Add(length);
             var quality = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 12, Foreground = Brush.Parse("#BCD49F"), VerticalAlignment = VerticalAlignment.Center };
             quality.Bind(TextBlock.TextProperty, new Binding(nameof(Track.SourceQualityText)) { Source = track, StringFormat = "Source: {0}" });
             ToolTip.SetTip(quality, "Encoding reported by Chrome. ~kbps is an approximate stream average. Unknown means unavailable; WAV output settings are separate.");
-            Grid.SetColumn(quality, 3); row.Children.Add(quality);
-            var detail = new TextBlock { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center }; detail.Bind(TextBlock.TextProperty, new Binding(nameof(Track.Status)) { Source = track }); Grid.SetColumn(detail, 4); row.Children.Add(detail);
+            Grid.SetColumn(quality, 4); row.Children.Add(quality);
+            var detail = new TextBlock { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center }; detail.Bind(TextBlock.TextProperty, new Binding(nameof(Track.Status)) { Source = track }); Grid.SetColumn(detail, 5); row.Children.Add(detail);
             return row;
         }); Row(list, 4);
+        var playerBar = new Grid { ColumnDefinitions = new ColumnDefinitions("88,115,*,120"), RowDefinitions = new RowDefinitions("Auto,Auto"), ColumnSpacing = 8, RowSpacing = 5 };
+        playerBar.Children.Add(nowPlaying); Grid.SetColumnSpan(nowPlaying, 4);
+        playbackToggle.Click += (_, _) => _ = PlayerActionAsync(() => player.ToggleAsync());
+        playbackStop.Click += (_, _) => _ = PlayerActionAsync(() => player.StopAsync());
+        playbackSeek.AddHandler(Avalonia.Input.InputElement.PointerPressedEvent, (_, _) => seekingPlayer = true, Avalonia.Interactivity.RoutingStrategies.Tunnel, true);
+        playbackSeek.AddHandler(Avalonia.Input.InputElement.PointerReleasedEvent, (_, _) => { seekingPlayer = false; _ = PlayerActionAsync(() => player.SeekAsync(playbackSeek.Value / 1000 * (player.State?.Duration ?? 0))); }, Avalonia.Interactivity.RoutingStrategies.Tunnel, true);
+        playbackSeek.KeyUp += (_, _) => _ = PlayerActionAsync(() => player.SeekAsync(playbackSeek.Value / 1000 * (player.State?.Duration ?? 0)));
+        Control[] controls = [playbackToggle, playbackStop, playbackSeek, playbackTime];
+        for (var i = 0; i < controls.Length; i++) { Grid.SetRow(controls[i], 1); Grid.SetColumn(controls[i], i); playerBar.Children.Add(controls[i]); }
+        Row(playerBar, 5);
+        var spectrum = new StackPanel { Spacing = 3 }; spectrum.Children.Add(new TextBlock { Text = "AUDIO SPECTRUM   ·   50 Hz → 18 kHz", FontSize = 10, Foreground = Brush.Parse("#BCD49F") }); spectrum.Children.Add(new SpectrumView()); Row(spectrum, 6);
+        playerTimer.Tick += async (_, _) => await PollPlayerAsync(); playerTimer.Start();
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
         var record = Button("Record selected as WAV", () => Work(token => Record(token, false)));
         record.Background = Brush.Parse("#C9F47B"); record.Foreground = Brush.Parse("#1B2811"); record.FontWeight = FontWeight.Bold;
         actions.Children.Add(record);
         actions.Children.Add(Button("Record again (new copy)", () => Work(token => Record(token, true)))); actions.Children.Add(stop);
         actions.Children.Add(new TextBlock { Text = "48 kHz · 16-bit stereo WAV", FontSize = 12, Foreground = Brush.Parse("#BCD49F"), VerticalAlignment = VerticalAlignment.Center });
-        stop.Click += (_, _) => { cancellation?.Cancel(); SetStatus(scanControl != null ? "Stopping scan… tracks found will be kept." : "Stopping… unfinished recordings remain partial."); }; Row(actions, 6);
-        Row(status, 7); Row(progress, 8); Row(log, 9); Content = root;
+        stop.Click += (_, _) => { cancellation?.Cancel(); SetStatus(scanControl != null ? "Stopping scan… tracks found will be kept." : "Stopping… unfinished recordings remain partial."); }; Row(actions, 8);
+        Row(status, 9); Row(progress, 10); Row(log, 11); Content = root;
         SetStatus(OperatingSystem.IsMacOS() ? "First recording: macOS will request Screen & System Audio Recording permission. Only audio from the dedicated Chrome app is requested. Keep the Mac awake during recording." : "Linux: requires PulseAudio or PipeWire-Pulse and pulseaudio-utils. The dedicated Chrome audio goes to a silent recording channel. Keep the computer awake during recording.");
         UpdateCount(); Closing += OnClosing;
     }
@@ -134,22 +159,26 @@ public sealed class MainWindow : Window
     }
     private async Task ClearScanAsync()
     {
-        if (clearing || (operation is { IsCompleted: false } && scanControl == null)) return;
+        if (clearing || playerBusy || (operation is { IsCompleted: false } && scanControl == null)) return;
         clearing = true; clearScan.IsEnabled = false;
         try {
+            while (pollingPlayer) await Task.Delay(25);
             cancellation?.Cancel(); if (operation != null) await operation;
+            await player.StopAsync(); RefreshPlayer();
             catalog.Clear(); RefreshTracks(); progress.Value = 0;
             SetStatus("Scanned list cleared. Saved WAVs are untouched. Choose filters, then Scan library or Find in library to start again.");
         }
         finally { clearing = false; clearScan.IsEnabled = true; }
     }
     private void SetStatus(string text) { status.Text = text; log.Text = $"{DateTime.Now:HH:mm:ss}  {text}\n" + (log.Text ?? ""); if (log.Text.Length > 20000) log.Text = log.Text[..20000]; }
-    private void Work(Func<CancellationToken, Task> action) { if (!clearing && operation is not { IsCompleted: false }) operation = RunOperation(action); }
+    private void Work(Func<CancellationToken, Task> action) { if (!closeRequested && !clearing && !playerBusy && operation is not { IsCompleted: false }) operation = RunOperation(action); }
     private async Task RunOperation(Func<CancellationToken, Task> action)
     {
+        while (pollingPlayer) await Task.Delay(25);
         cancellation = new(); clearScan.IsEnabled = false; search.IsEnabled = false; foreach (var button in idle) button.IsEnabled = false;
         site.IsEnabled = folder.IsEnabled = list.IsEnabled = false; stop.IsEnabled = true; progress.Value = 0;
-        try { await action(cancellation.Token); }
+        RefreshPlayer();
+        try { await player.StopAsync(); await action(cancellation.Token); }
         catch (OperationCanceledException) { SetStatus(scanControl != null ? "Scan stopped. Tracks found are kept; Scan library starts a fresh scan." : "Stopped. Completed WAVs are saved; select remaining tracks to resume."); }
         catch (Exception ex) { SetStatus(ex.Message); }
         finally {
@@ -157,7 +186,39 @@ public sealed class MainWindow : Window
             cancellation.Dispose(); cancellation = null; foreach (var button in idle) button.IsEnabled = true;
             resettingSite = true; site.SelectedIndex = browser.Site.Id == "suno" ? 1 : 0; resettingSite = false;
             site.IsEnabled = folder.IsEnabled = list.IsEnabled = true; stop.IsEnabled = false;
+            RefreshPlayer();
         }
+    }
+    private async Task PlayTrackAsync(Track track)
+    {
+        if (player.Track?.Key == track.Key) { await PlayerActionAsync(() => player.ToggleAsync()); return; }
+        await PlayerActionAsync(() => player.PlayAsync(track, CancellationToken.None));
+    }
+    private async Task PlayerActionAsync(Func<Task> action)
+    {
+        if (closeRequested || playerBusy || clearing || operation is { IsCompleted: false }) return;
+        playerBusy = true; foreach (var button in idle) button.IsEnabled = false;
+        site.IsEnabled = clearScan.IsEnabled = list.IsEnabled = false; RefreshPlayer();
+        try { while (pollingPlayer) await Task.Delay(25); await action(); }
+        catch (Exception ex) { await player.StopAsync(); SetStatus("Music player: " + ex.Message); }
+        finally { playerBusy = false; foreach (var button in idle) button.IsEnabled = true; site.IsEnabled = clearScan.IsEnabled = list.IsEnabled = true; RefreshPlayer(); }
+    }
+    private async Task PollPlayerAsync()
+    {
+        if (player.Track == null || playerBusy || pollingPlayer || clearing || operation is { IsCompleted: false }) return;
+        pollingPlayer = true;
+        try { await player.PollAsync(); RefreshPlayer(); }
+        catch (Exception ex) { await player.StopAsync(); RefreshPlayer(); SetStatus("Music player: " + ex.Message); }
+        finally { pollingPlayer = false; }
+    }
+    private void RefreshPlayer()
+    {
+        var available = !playerBusy && cancellation == null && player.Track != null;
+        playbackToggle.IsEnabled = playbackStop.IsEnabled = playbackSeek.IsEnabled = available;
+        playbackToggle.Content = player.State?.Done == true ? "Replay" : player.State?.Paused == true ? "Resume" : "Pause";
+        nowPlaying.Text = player.Track == null ? "Music player · click Play beside a track · Chrome can stay minimized" : player.Track.Title + " · " + player.Track.SourceQualityText + (player.SpectrumError == null ? "" : " · Spectrum unavailable");
+        playbackTime.Text = $"{TimeSpan.FromSeconds(player.State?.Elapsed ?? 0):m\\:ss} / {TimeSpan.FromSeconds(player.State?.Duration ?? 0):m\\:ss}";
+        if (!seekingPlayer) playbackSeek.Value = Math.Clamp((player.State?.Elapsed ?? 0) / Math.Max(1, player.State?.Duration ?? 1) * 1000, 0, 1000);
     }
     private async Task Scan(CancellationToken token, bool find = false)
     {
@@ -189,7 +250,10 @@ public sealed class MainWindow : Window
     private async void OnClosing(object? sender, WindowClosingEventArgs e)
     {
         if (closing) return; e.Cancel = true; if (closeRequested) return; closeRequested = true;
+        playerTimer.Stop();
         cancellation?.Cancel(); if (operation != null) await operation;
+        while (playerBusy || pollingPlayer) await Task.Delay(50);
+        await player.StopAsync();
         await browser.DisposeAsync(); closing = true; Close();
     }
 }

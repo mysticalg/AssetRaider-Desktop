@@ -1,4 +1,12 @@
-# AssetRaider Desktop 0.3.6 — reliable playback startup
+# AssetRaider Desktop 0.3.7 — music player and live spectrum
+
+Play any scanned track from its row. The music player provides pause/resume, replay, seeking, elapsed time and source quality while the dedicated Chrome window is minimized. Starting a scan, changing sites or recording stops the preview first; playback and seeking controls are unavailable during recording.
+
+The live spectrum uses the dedicated browser's PCM audio during listening and recording. Listening does not write WAV files. The graphic is for presentation and does not change the audio. Unavailable bitrate is omitted from source-quality text.
+
+Validation: a live Suno track played with Chrome minimized; pause, seek, resume, completion, replay and stop passed. The spectrum responded to real browser audio, stopping reset it, and previewing created no WAV files. Recording capture, source-quality and minimum-size interface checks remain covered separately.
+
+## Reliable playback startup (introduced in 0.3.6)
 
 Fixes a Suno startup timeout when the song's Play button appears before its click handler is ready. Preparation now rechecks the current, enabled Play button while waiting for the audio player. It stops retrying as soon as the player is found, preserves the selected-song checks, and never clicks Pause. Cancellation and failures remove the retry timer.
 

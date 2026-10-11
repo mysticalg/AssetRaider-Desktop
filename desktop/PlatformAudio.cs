@@ -7,4 +7,5 @@ internal static class PlatformAudio
     public static void ConfigureBrowser(ProcessStartInfo start) { }
     public static Task PrepareBrowserAsync() => Task.CompletedTask;
     public static Task ReleaseBrowserAsync() => Task.CompletedTask;
+    public static Task SetListeningAsync(bool enabled) => Task.CompletedTask;
 }

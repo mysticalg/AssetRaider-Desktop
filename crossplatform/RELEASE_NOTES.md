@@ -1,4 +1,10 @@
-# AssetRaider 0.4.6 — macOS and Linux beta
+# AssetRaider 0.4.7 — music player and live spectrum
+
+Play scanned tracks directly from the app, with pause/resume, replay, seeking and elapsed time. Chrome can remain minimized. The spectrum displays the dedicated browser's actual audio activity, including during recording. Listening writes no audio files. Scanning, changing sites and recording stop preview playback first. Unknown bitrate is omitted. Linux preview audio is routed from the private recording channel to speakers while listening.
+
+The new player and spectrum compile and pass interface checks; live playback was tested on Windows. Native macOS/Linux playback and permission handling for this update still need runtime verification.
+
+## Previous release: 0.4.6
 
 **New in 0.4.6:** optional media-diagnostics cleanup runs outside the recording stop path, so a slow connection cannot append silence to a completed capture. Includes per-track source quality: codec, approximate browser-reported stream bitrate, sample rate and channels. Values update during recording and are saved in the completed-track history. Missing/ambiguous metadata stays unknown; video or multiple-audio-track resources do not receive an audio bitrate estimate. The generated app icon and refreshed layout remain included.
 

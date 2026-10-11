@@ -1,4 +1,4 @@
-async ({ site = 'udio', id } = {}) => {
+async ({ site = 'udio', id, preview = false } = {}) => {
   window.__assetRaiderDesktop?.stop();
   const siteName = site === 'suno' ? 'Suno' : 'Udio';
   if (id && location.pathname.replace(/\/$/, '') !== (site === 'suno' ? '/song/' : '/songs/') + id) throw new Error('The page is not the selected song. Load the library and retry.');
@@ -49,9 +49,20 @@ async ({ site = 'udio', id } = {}) => {
     start: async () => {
       if (!active || !player) throw new Error('The prepared player was lost.');
       if (error) throw new Error(error);
+      if (preview && done) { player.currentTime = 0; done = false; lastTime = 0; }
       started = true;
       lastAdvance = Date.now();
       await originalPlay.call(player);
+    },
+    pause: () => {
+      if (!preview || !active || !player) throw new Error('Pause is available only in the music player.');
+      originalPause.call(player);
+    },
+    seek: seconds => {
+      if (!preview || !active || !player) throw new Error('Seeking is available only in the music player.');
+      if (!Number.isFinite(seconds)) throw new Error('Invalid playback position.');
+      player.currentTime = Math.max(0, Math.min(seconds, duration));
+      done = false; lastTime = player.currentTime; lastAdvance = Date.now();
     },
     state: () => {
       if (!player) throw new Error('No player.');
@@ -59,9 +70,9 @@ async ({ site = 'udio', id } = {}) => {
       if (current > lastTime + .01) { lastTime = current; lastAdvance = Date.now(); }
       if (player.error) error = `${siteName} reported a playback error.`;
       if (src && (player.currentSrc || player.src) !== src && !done) error = 'The song changed during recording.';
-      if (started && !done && Date.now() - lastAdvance > 30000) error = 'Playback stalled or paused for 30 seconds.';
+      if (started && !done && !(preview && player.paused) && Date.now() - lastAdvance > 30000) error = 'Playback stalled or paused for 30 seconds.';
       if (started && Math.abs(player.playbackRate - 1) > .001) error = 'Playback speed changed during recording.';
-      return { Duration: duration, Elapsed: current, Done: done, Error: error, Source: src };
+      return { Duration: duration, Elapsed: current, Done: done, Error: error, Source: src, Paused: player.paused };
     }
   };
   try {

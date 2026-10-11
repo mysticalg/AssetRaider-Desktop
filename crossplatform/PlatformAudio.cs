@@ -7,6 +7,22 @@ internal static class PlatformAudio
     // A fresh name per app instance avoids capturing any existing desktop/microphone source.
     public static string Sink { get; } = "assetraider_" + Environment.ProcessId + "_" + Guid.NewGuid().ToString("N")[..8];
     private static string? module;
+    private static string? listeningModule;
+    public static async Task SetListeningAsync(bool enabled)
+    {
+        if (!OperatingSystem.IsLinux()) return;
+        if (!enabled) {
+            var owned = listeningModule;
+            if (owned != null) await Command("pactl", "unload-module", owned);
+            listeningModule = null;
+        } else if (listeningModule == null) {
+            var output = (await Command("pactl", "get-default-sink")).Trim();
+            if (output == Sink || output.Length == 0) throw new IOException("Choose a speaker output in the desktop sound settings.");
+            var id = (await Command("pactl", "load-module", "module-loopback", "source=" + Sink + ".monitor", "sink=" + output, "latency_msec=50")).Trim();
+            if (!uint.TryParse(id, out _)) throw new IOException("Could not route preview audio to speakers.");
+            listeningModule = id;
+        }
+    }
     public static void ConfigureBrowser(ProcessStartInfo start)
     {
         if (OperatingSystem.IsLinux()) start.Environment["PULSE_SINK"] = Sink;
@@ -21,6 +37,7 @@ internal static class PlatformAudio
     }
     public static async Task ReleaseBrowserAsync()
     {
+        try { await SetListeningAsync(false); } catch { }
         var owned = module; module = null;
         if (owned != null) try { await Command("pactl", "unload-module", owned); } catch { }
     }

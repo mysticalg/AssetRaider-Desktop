@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const source = (name: string) => readFileSync(`desktop/Scripts/${name}.js`, "utf8");
-const prepare = (options?: { site: string; id?: string }) => (0, eval)(`(${source("player")})`)(options) as Promise<number>;
+const prepare = (options?: { site: string; id?: string; preview?: boolean }) => (0, eval)(`(${source("player")})`)(options) as Promise<number>;
 const api = () => (window as any).__assetRaiderDesktop;
 
 describe("desktop Udio playback controller", () => {
@@ -60,6 +60,19 @@ describe("desktop Udio playback controller", () => {
     await vi.advanceTimersByTimeAsync(21000);
     await pending;
     expect(HTMLMediaElement.prototype.play).toBe(play);
+  });
+
+  it("allows deliberate pause, seek and replay in preview without weakening recording checks", async () => {
+    await prepare({ site: "suno", preview: true }); await api().start();
+    api().pause(); await vi.advanceTimersByTimeAsync(35000);
+    expect(api().state().Error).toBe("");
+    api().seek(60); expect(audio.currentTime).toBe(60);
+    await api().start(); audio.dispatchEvent(new Event("ended"));
+    expect(api().state().Done).toBe(true);
+    await api().start(); expect(audio.currentTime).toBe(0); expect(api().state().Done).toBe(false);
+    expect(() => api().seek(NaN)).toThrow("Invalid");
+    api().stop(); await prepare();
+    expect(() => api().pause()).toThrow("only"); expect(() => api().seek(10)).toThrow("only");
   });
   it("does not use unrelated page or player toolbar buttons", async () => {
     document.body.innerHTML = '<button aria-label="Play">Wrong player</button><main></main>';

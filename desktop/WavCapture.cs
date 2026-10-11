@@ -7,8 +7,8 @@ namespace AssetRaider.Desktop;
 public sealed class WavCapture : IAsyncDisposable
 {
     private readonly WasapiRecorder recorder;
-    private readonly WaveFileWriter writer;
-    private readonly FileStream output;
+    private readonly WaveFileWriter? writer;
+    private readonly FileStream? output;
     private Exception? fault;
     private long frames;
     private long audibleSamples;
@@ -18,19 +18,21 @@ public sealed class WavCapture : IAsyncDisposable
     public bool HasAudio => Interlocked.Read(ref audibleSamples) > 100;
     public Exception? Fault => fault;
 
-    private WavCapture(WasapiRecorder recorder, string path)
+    private WavCapture(WasapiRecorder recorder, string? path)
     {
         this.recorder = recorder;
-        output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
-        try { writer = new WaveFileWriter(output, recorder.WaveFormat); }
-        catch { output.Dispose(); throw; }
+        if (path != null) {
+            output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+            try { writer = new WaveFileWriter(output, recorder.WaveFormat); }
+            catch { output.Dispose(); throw; }
+        }
         recorder.RecordingStopped += (_, e) => { if (e.Exception != null) fault = e.Exception; };
         recorder.DataAvailable += (buffer, flags, position, _) =>
         {
             if (fault != null) return;
             try
             {
-                if (frames > 48000L * 1830) throw new IOException("Recording exceeded its time limit.");
+                if (writer != null && frames > 48000L * 1830) throw new IOException("Recording exceeded its time limit.");
                 if (nextPosition.HasValue && position > nextPosition.Value)
                 {
                     var gap = position - nextPosition.Value;
@@ -40,7 +42,8 @@ public sealed class WavCapture : IAsyncDisposable
                 if ((flags & AudioClientBufferFlags.Silent) != 0) WriteSilence(buffer.Length);
                 else
                 {
-                    writer.Write(buffer);
+                    writer?.Write(buffer);
+                    try { AudioSpectrum.Shared.Push(buffer); } catch { } // Presentation must never disrupt capture.
                     long audible = 0;
                     for (var i = 0; i + 1 < buffer.Length; i += 2)
                         if (Math.Abs((int)BinaryPrimitives.ReadInt16LittleEndian(buffer.Slice(i, 2))) > 8) audible++;
@@ -60,12 +63,15 @@ public sealed class WavCapture : IAsyncDisposable
         while (bytes > 0)
         {
             var count = Math.Min(bytes, zeros.Length);
-            writer.Write(zeros[..count]);
+            writer?.Write(zeros[..count]);
+            try { AudioSpectrum.Shared.Push(zeros[..count]); } catch { }
             Interlocked.Add(ref frames, count / 4);
             bytes -= count;
         }
     }
-    public static async Task<WavCapture> StartAsync(int processId, string path)
+    public static Task<WavCapture> StartAsync(int processId, string path) => StartCaptureAsync(processId, path);
+    public static Task<WavCapture> StartMonitorAsync(int processId) => StartCaptureAsync(processId, null);
+    private static async Task<WavCapture> StartCaptureAsync(int processId, string? path)
     {
         if (Environment.OSVersion.Version.Build < 20348) throw new PlatformNotSupportedException("Per-app recording needs Windows build 20348 or newer (Windows 11 recommended).");
         var recorder = await Task.Run(() => {
@@ -75,14 +81,14 @@ public sealed class WavCapture : IAsyncDisposable
             .WithFormat(new WaveFormat(48000, 16, 2)).BuildAsync();
         });
         WavCapture? capture = null;
-        try { capture = new WavCapture(recorder, path); recorder.StartRecording(); return capture; }
-        catch { await recorder.DisposeAsync(); capture?.writer.Dispose(); capture?.output.Dispose(); throw; }
+        try { AudioSpectrum.Shared.Reset(); capture = new WavCapture(recorder, path); recorder.StartRecording(); return capture; }
+        catch { await recorder.DisposeAsync(); capture?.writer?.Dispose(); capture?.output?.Dispose(); throw; }
     }
     public async ValueTask DisposeAsync()
     {
         if (disposed) return;
         disposed = true;
         try { recorder.StopRecording(); await recorder.DisposeAsync(); }
-        finally { try { writer.Dispose(); } finally { output.Dispose(); } }
+        finally { try { writer?.Dispose(); } finally { output?.Dispose(); } }
     }
 }

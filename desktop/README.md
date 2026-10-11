@@ -1,8 +1,12 @@
-# AssetRaider desktop — Udio + Suno WAV recorder (0.3.3)
+# AssetRaider desktop — Udio + Suno player and WAV recorder (0.3.7)
+
+## Music player
+
+Click **Play** beside a scanned track to listen without saving a file. Use the row button or player bar to pause, resume or replay; drag the seek slider to change position. The dedicated Chrome window can stay minimized. The live spectrum shows the browser's actual audio during listening and recording; it does not change the sound. Starting a scan, changing sites or recording stops the preview first. Playback controls are disabled during recording.
 
 ## Source quality
 
-Each recording shows the codec, approximate stream bitrate (`~kbps`), sample rate (`kHz`) and channels reported by Chrome for its selected player. Detection starts during preparation/playback, not scanning. Unknown values mean Chrome did not expose reliable metadata. Bitrate is a stream average and may include headers/container overhead; it is withheld for video/multiple-audio resources. These figures describe the playback input, independently of the 48 kHz / 16-bit stereo WAV output.
+Each playing or recording track shows the codec, approximate stream bitrate (`~kbps`), sample rate (`kHz`) and channels reported by Chrome for its selected player. Detection starts during preparation/playback, not scanning. Unavailable fields, including bitrate, are omitted; no detected fields shows **Source quality unavailable**. Bitrate is a stream average and may include headers/container overhead; it is withheld for video/multiple-audio resources. These figures describe the playback input, independently of the 48 kHz / 16-bit stereo WAV output.
 
 Detected values are saved with the completed-track history. Skipped older WAVs without stored source metadata show unknown; the app cannot infer their original encoding from the WAV. Detection does not download a second audio copy or retain stream URLs.
 
@@ -42,7 +46,7 @@ With the .NET 10 SDK installed:
 
 ```powershell
 ./scripts/build-desktop.ps1
-$check = Start-Process ./output/desktop-0.3.3/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
+$check = Start-Process ./output/desktop-0.3.7/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
 Get-Content C:\Temp\AssetRaiderTest\self-test.json
 ```
 

@@ -10,10 +10,16 @@ public sealed record SourceQuality(string? Codec = null, int? SampleRateHz = nul
 {
     public static SourceQuality Unknown { get; } = new();
     public string Measurement => "Chrome source metadata; bitrate is an approximate stream average, not an instantaneous encoder setting.";
-    [JsonIgnore] public string Display => string.Join(" · ", Codec ?? "Codec unknown",
-        BitrateBps is { } bits ? $"~{(bits / 1000d).ToString("0.#", CultureInfo.InvariantCulture)} kbps" : "bitrate unknown",
-        SampleRateHz is { } hz ? $"{(hz / 1000d).ToString("0.###", CultureInfo.InvariantCulture)} kHz" : "sample rate unknown",
-        Channels switch { 1 => "mono", 2 => "stereo", { } n => $"{n} channels", _ => "channels unknown" });
+    [JsonIgnore] public string Display {
+        get {
+            var parts = new List<string>();
+            if (Codec != null) parts.Add(Codec);
+            if (BitrateBps is > 0) parts.Add($"~{(BitrateBps.Value / 1000d).ToString("0.#", CultureInfo.InvariantCulture)} kbps");
+            if (SampleRateHz is > 0) parts.Add($"{(SampleRateHz.Value / 1000d).ToString("0.###", CultureInfo.InvariantCulture)} kHz");
+            if (Channels is > 0) parts.Add(Channels switch { 1 => "mono", 2 => "stereo", _ => $"{Channels} channels" });
+            return parts.Count > 0 ? string.Join(" · ", parts) : "Source quality unavailable";
+        }
+    }
 }
 
 // Bounded, per-recording state. URLs stay in memory and are never written into the ledger/log.

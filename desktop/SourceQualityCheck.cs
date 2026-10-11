@@ -30,6 +30,7 @@ internal static class SourceQualityCheck
         Props("song", ("kAudioTracks", "bad json")); Require(collector.Read("blob:new-song") == SourceQuality.Unknown, "Malformed metadata failed open.");
         collector.Accept("Media.playerEventsAdded", JsonSerializer.SerializeToElement(new { playerId = "bad", events = new[] { new { value = "bad json" } } }));
         Require(expected.Display.Contains("~96 kbps") && expected.Display.Contains("44.1 kHz"), "Source quality units/approximation label incorrect.");
+        Require(new SourceQuality("Opus", 48000, null, 2).Display == "Opus · 48 kHz · stereo", "Unavailable bitrate was displayed.");
         Require(BrowserData.Decode<SourceQuality>(JsonSerializer.Serialize(expected)) == expected, "Quality did not round-trip through saved JSON.");
     }
 

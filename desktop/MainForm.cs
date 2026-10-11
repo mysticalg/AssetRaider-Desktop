@@ -7,6 +7,14 @@ namespace AssetRaider.Desktop;
 public sealed class MainForm : Form
 {
     private readonly MusicBrowser browser = new();
+    private readonly PreviewPlayer player;
+    private readonly Label nowPlaying = new() { Text = "Music player · click Play beside a track", AutoEllipsis = true, Dock = DockStyle.Fill };
+    private readonly Label playbackTime = new() { Text = "0:00 / 0:00", AutoSize = true };
+    private readonly Button playbackToggle = new() { Text = "Pause", Enabled = false };
+    private readonly Button playbackStop = new() { Text = "Stop player", Enabled = false };
+    private readonly TrackBar playbackSeek = new() { Minimum = 0, Maximum = 1000, TickStyle = TickStyle.None, Dock = DockStyle.Fill, Enabled = false };
+    private readonly System.Windows.Forms.Timer playerTimer = new() { Interval = 250 };
+    private bool playerBusy, pollingPlayer, seekingPlayer;
     private readonly ComboBox sitePicker = new();
     private readonly BindingList<Track> tracks = [];
     private readonly LibraryCatalog catalog = new();
@@ -31,18 +39,21 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "AssetRaider 0.3.6 — Udio + Suno WAV Recorder";
-        MinimumSize = new Size(960, 760); Size = new Size(1160, 880);
+        player = new(browser);
+        Text = "AssetRaider 0.3.7 — Udio + Suno WAV Recorder";
+        MinimumSize = new Size(960, 840); Size = new Size(1160, 940);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10);
         BackColor = Color.FromArgb(242, 245, 239); ForeColor = Color.FromArgb(31, 40, 32);
-        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(20), ColumnCount = 1, RowCount = 10 };
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(20), ColumnCount = 1, RowCount = 12 };
         layout.ColumnStyles.Add(new(SizeType.Percent, 100));
         layout.RowStyles.Add(new(SizeType.Absolute, 92));
         layout.RowStyles.Add(new(SizeType.Absolute, 46));
         layout.RowStyles.Add(new(SizeType.Absolute, 46));
         layout.RowStyles.Add(new(SizeType.Absolute, 46));
         layout.RowStyles.Add(new(SizeType.Percent, 100));
+        layout.RowStyles.Add(new(SizeType.Absolute, 70));
+        layout.RowStyles.Add(new(SizeType.Absolute, 74));
         layout.RowStyles.Add(new(SizeType.Absolute, 46));
         layout.RowStyles.Add(new(SizeType.Absolute, 52));
         layout.RowStyles.Add(new(SizeType.Absolute, 48));
@@ -100,7 +111,7 @@ public sealed class MainForm : Form
         destination.Controls.Add(folder);
         destination.Controls.Add(MakeButton("Browse…", () => { using var dialog = new FolderBrowserDialog { InitialDirectory = folder.Text }; if (dialog.ShowDialog(this) == DialogResult.OK) folder.Text = dialog.SelectedPath; }));
         destination.Controls.Add(MakeButton("Open", () => { try { Directory.CreateDirectory(folder.Text); Process.Start(new ProcessStartInfo(folder.Text) { UseShellExecute = true }); } catch (Exception e) { SetStatus(e.Message); } }));
-        layout.Controls.Add(destination, 0, 5);
+        layout.Controls.Add(destination, 0, 7);
         grid.Dock = DockStyle.Fill; grid.AutoGenerateColumns = false; grid.AllowUserToAddRows = false; grid.AllowUserToDeleteRows = false;
         grid.RowHeadersVisible = false; grid.BackgroundColor = Color.White; grid.BorderStyle = BorderStyle.None;
         grid.SelectionMode = DataGridViewSelectionMode.FullRowSelect; grid.MultiSelect = false;
@@ -114,6 +125,7 @@ public sealed class MainForm : Form
         grid.GridColor = Color.FromArgb(230, 236, 225); grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
         grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(249, 251, 246);
         grid.Columns.Add(new DataGridViewCheckBoxColumn { DataPropertyName = nameof(Track.Selected), HeaderText = "✓", Width = 44 });
+        grid.Columns.Add(new DataGridViewButtonColumn { DataPropertyName = nameof(Track.PlaybackAction), Name = "Playback", HeaderText = "Player", Width = 82, ReadOnly = true });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Title), HeaderText = "Song", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 45, ReadOnly = true });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Duration), HeaderText = "Length", Width = 70, ReadOnly = true });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.SourceQualityText), HeaderText = "Source quality", Width = 255, ReadOnly = true,
@@ -123,7 +135,25 @@ public sealed class MainForm : Form
         grid.DataSource = tracks;
         grid.CurrentCellDirtyStateChanged += (_, _) => { if (grid.IsCurrentCellDirty) grid.CommitEdit(DataGridViewDataErrorContexts.Commit); };
         grid.CellValueChanged += (_, _) => UpdateCount();
+        grid.CellContentClick += (_, e) => {
+            if (e.RowIndex >= 0 && e.ColumnIndex == 1 && operation is not { IsCompleted: false } && !playerBusy && grid.Rows[e.RowIndex].DataBoundItem is Track track)
+                _ = PlayTrackAsync(track);
+        };
         layout.Controls.Add(grid, 0, 4);
+        var playerBar = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, RowCount = 2 };
+        playerBar.ColumnStyles.Add(new(SizeType.Absolute, 88)); playerBar.ColumnStyles.Add(new(SizeType.Absolute, 125));
+        playerBar.ColumnStyles.Add(new(SizeType.Percent, 100)); playerBar.ColumnStyles.Add(new(SizeType.Absolute, 120));
+        playerBar.RowStyles.Add(new(SizeType.Absolute, 25)); playerBar.RowStyles.Add(new(SizeType.Percent, 100));
+        playerBar.Controls.Add(nowPlaying, 0, 0); playerBar.SetColumnSpan(nowPlaying, 4);
+        StyleButton(playbackToggle); StyleButton(playbackStop);
+        playbackToggle.Click += (_, _) => _ = PlayerActionAsync(() => player.ToggleAsync());
+        playbackStop.Click += (_, _) => _ = PlayerActionAsync(() => player.StopAsync());
+        playbackSeek.MouseDown += (_, _) => seekingPlayer = true;
+        playbackSeek.MouseUp += (_, _) => { seekingPlayer = false; _ = PlayerActionAsync(() => player.SeekAsync(playbackSeek.Value / 1000d * (player.State?.Duration ?? 0))); };
+        playbackSeek.KeyUp += (_, _) => _ = PlayerActionAsync(() => player.SeekAsync(playbackSeek.Value / 1000d * (player.State?.Duration ?? 0)));
+        playerBar.Controls.Add(playbackToggle, 0, 1); playerBar.Controls.Add(playbackStop, 1, 1); playerBar.Controls.Add(playbackSeek, 2, 1); playerBar.Controls.Add(playbackTime, 3, 1);
+        layout.Controls.Add(playerBar, 0, 5); layout.Controls.Add(new SpectrumView { Dock = DockStyle.Fill }, 0, 6);
+        playerTimer.Tick += async (_, _) => await PollPlayerAsync(); playerTimer.Start();
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(0, 7, 0, 0) };
         var record = MakeButton("Record selected as WAV", () => Work(token => Record(token, false)));
         record.BackColor = Color.FromArgb(201, 244, 123); record.ForeColor = Color.FromArgb(27, 40, 17); record.Font = new Font(Font, FontStyle.Bold); actions.Controls.Add(record);
@@ -132,12 +162,12 @@ public sealed class MainForm : Form
         stop.Click += (_, _) => { cancellation?.Cancel(); SetStatus(scanControl != null ? "Stopping scan… tracks found will be kept." : "Stopping… any unfinished recording will be kept as a partial WAV."); };
         actions.Controls.Add(stop);
         actions.Controls.Add(new Label { Text = "48 kHz · 16-bit stereo WAV", AutoSize = true, ForeColor = Color.FromArgb(80, 99, 67), Margin = new Padding(8, 10, 0, 0), Font = new Font("Segoe UI", 9) });
-        layout.Controls.Add(actions, 0, 6);
+        layout.Controls.Add(actions, 0, 8);
         status.Dock = DockStyle.Fill; status.AutoEllipsis = true; status.Text = "Sign in once, then Open library / filters and Scan library. Type a name to filter scanned tracks; Find in library searches Suno directly.";
-        layout.Controls.Add(status, 0, 7);
-        progress.Dock = DockStyle.Fill; layout.Controls.Add(progress, 0, 8);
+        layout.Controls.Add(status, 0, 9);
+        progress.Dock = DockStyle.Fill; layout.Controls.Add(progress, 0, 10);
         log.Dock = DockStyle.Fill; log.Multiline = true; log.ReadOnly = true; log.ScrollBars = ScrollBars.Vertical;
-        log.BackColor = Color.FromArgb(233, 239, 227); log.ForeColor = Color.FromArgb(64, 77, 56); log.Font = new Font("Consolas", 9); log.BorderStyle = BorderStyle.None; layout.Controls.Add(log, 0, 9);
+        log.BackColor = Color.FromArgb(233, 239, 227); log.ForeColor = Color.FromArgb(64, 77, 56); log.Font = new Font("Consolas", 9); log.BorderStyle = BorderStyle.None; layout.Controls.Add(log, 0, 11);
         var tips = new ToolTip(); tips.SetToolTip(record, "Record visible selected tracks. Output: 48 kHz / 16-bit stereo WAV, about 11 MB per minute. Source quality is unchanged.");
         tips.SetToolTip(search, "Filter scanned tracks by name. Find in library searches Suno directly. Select all applies to visible matches.");
         Disposed += (_, _) => tips.Dispose();
@@ -172,10 +202,12 @@ public sealed class MainForm : Form
     }
     private async Task ClearScanAsync()
     {
-        if (clearing || (operation is { IsCompleted: false } && scanControl == null)) return;
+        if (clearing || playerBusy || (operation is { IsCompleted: false } && scanControl == null)) return;
         clearing = true; clearScan.Enabled = false;
         try {
+            while (pollingPlayer) await Task.Delay(25);
             cancellation?.Cancel(); if (operation != null) await operation;
+            await player.StopAsync(); RefreshPlayer();
             catalog.Clear(); RefreshTracks(); progress.Value = 0;
             SetStatus("Scanned list cleared. Saved WAVs are untouched. Choose filters, then Scan library or Find in library to start again.");
         }
@@ -186,15 +218,17 @@ public sealed class MainForm : Form
 
     private void Work(Func<CancellationToken, Task> action)
     {
-        if (clearing || operation is { IsCompleted: false }) return;
+        if (closeRequested || clearing || playerBusy || operation is { IsCompleted: false }) return;
         operation = RunOperation(action);
     }
     private async Task RunOperation(Func<CancellationToken, Task> action)
     {
+        while (pollingPlayer) await Task.Delay(25);
         cancellation = new(); clearScan.Enabled = false; search.Enabled = false;
         foreach (var button in idleButtons) button.Enabled = false;
         sitePicker.Enabled = false; folder.Enabled = false; grid.ReadOnly = true; stop.Enabled = true; progress.Value = 0;
-        try { await action(cancellation.Token); }
+        RefreshPlayer();
+        try { await player.StopAsync(); await action(cancellation.Token); }
         catch (OperationCanceledException) { SetStatus(scanControl != null ? "Scan stopped. Tracks found are kept; Scan library starts a fresh scan." : "Stopped. Completed WAVs are saved; select remaining songs and record to resume."); }
         catch (Exception ex) { SetStatus(ex.Message); }
         finally
@@ -204,8 +238,41 @@ public sealed class MainForm : Form
             sitePicker.SelectedIndex = browser.Site.Id == "suno" ? 1 : 0; sitePicker.Enabled = true;
             foreach (DataGridViewColumn column in grid.Columns) column.ReadOnly = column.Index != 0;
             foreach (var button in idleButtons) button.Enabled = true;
+            RefreshPlayer();
             cancellation.Dispose(); cancellation = null;
         }
+    }
+    private async Task PlayTrackAsync(Track track)
+    {
+        if (player.Track?.Key == track.Key) { await PlayerActionAsync(() => player.ToggleAsync()); return; }
+        await PlayerActionAsync(() => player.PlayAsync(track, CancellationToken.None));
+    }
+    private async Task PlayerActionAsync(Func<Task> action)
+    {
+        if (closeRequested || playerBusy || clearing || operation is { IsCompleted: false }) return;
+        playerBusy = true; foreach (var button in idleButtons) button.Enabled = false;
+        sitePicker.Enabled = false; clearScan.Enabled = false; RefreshPlayer();
+        try { while (pollingPlayer) await Task.Delay(25); await action(); }
+        catch (Exception ex) { await player.StopAsync(); SetStatus("Music player: " + ex.Message); }
+        finally { playerBusy = false; foreach (var button in idleButtons) button.Enabled = true; sitePicker.Enabled = true; clearScan.Enabled = true; RefreshPlayer(); }
+    }
+    private async Task PollPlayerAsync()
+    {
+        if (player.Track == null || playerBusy || pollingPlayer || clearing || operation is { IsCompleted: false }) return;
+        pollingPlayer = true;
+        try { await player.PollAsync(); RefreshPlayer(); }
+        catch (Exception ex) { await player.StopAsync(); RefreshPlayer(); SetStatus("Music player: " + ex.Message); }
+        finally { pollingPlayer = false; }
+    }
+    private void RefreshPlayer()
+    {
+        var available = !playerBusy && cancellation == null && player.Track != null;
+        playbackToggle.Enabled = playbackStop.Enabled = playbackSeek.Enabled = available;
+        playbackToggle.Text = player.State?.Done == true ? "Replay" : player.State?.Paused == true ? "Resume" : "Pause";
+        nowPlaying.Text = player.Track == null ? "Music player · click Play beside a track · Chrome can stay minimized" : player.Track.Title + " · " + player.Track.SourceQualityText + (player.SpectrumError == null ? "" : " · Spectrum unavailable");
+        playbackTime.Text = $"{TimeSpan.FromSeconds(player.State?.Elapsed ?? 0):m\\:ss} / {TimeSpan.FromSeconds(player.State?.Duration ?? 0):m\\:ss}";
+        if (!seekingPlayer) playbackSeek.Value = (int)Math.Clamp((player.State?.Elapsed ?? 0) / Math.Max(1, player.State?.Duration ?? 1) * 1000, 0, 1000);
+        grid.InvalidateColumn(1);
     }
     private async Task Scan(CancellationToken token, bool find = false)
     {
@@ -268,8 +335,11 @@ public sealed class MainForm : Form
         e.Cancel = true;
         if (closeRequested) return;
         closeRequested = true;
+        playerTimer.Stop();
         cancellation?.Cancel();
         if (operation != null) await operation;
+        while (playerBusy || pollingPlayer) await Task.Delay(50);
+        await player.StopAsync(); playerTimer.Dispose();
         await browser.DisposeAsync();
         closing = true; Close();
     }

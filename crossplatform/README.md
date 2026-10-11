@@ -1,8 +1,12 @@
-# AssetRaider 0.4.3 beta — macOS and Linux
+# AssetRaider 0.4.7 beta — macOS and Linux
+
+## Music player
+
+Click **Play** beside a scanned track to listen without saving a file. Pause, resume, replay and seek from the player bar while the dedicated Chrome window stays minimized. The spectrum shows actual captured audio, also during recording. Scanning, changing sites and recording stop preview playback first. Linux connects its private audio channel to your default speakers only while previewing. macOS needs its existing system-audio permission for the spectrum.
 
 ## Source quality
 
-Each recording shows the codec, approximate stream bitrate (`~kbps`), sample rate (`kHz`) and channels reported by Chrome for its selected player. Detection starts during preparation/playback, not scanning. Unknown values mean Chrome did not expose reliable metadata. Bitrate is a stream average and may include headers/container overhead; it is withheld for video/multiple-audio resources. These figures describe the playback input, independently of the 48 kHz / 16-bit stereo WAV output.
+Each playing or recording track shows the codec, approximate stream bitrate (`~kbps`), sample rate (`kHz`) and channels reported by Chrome for its selected player. Detection starts during preparation/playback, not scanning. Unavailable fields, including bitrate, are omitted; no detected fields shows **Source quality unavailable**. Bitrate is a stream average and may include headers/container overhead; it is withheld for video/multiple-audio resources. These figures describe the playback input, independently of the 48 kHz / 16-bit stereo WAV output.
 
 Detected values are saved with the completed-track history. Skipped older WAVs without stored source metadata show unknown; the app cannot infer their original encoding from the WAV. Detection does not download a second audio copy or retain stream URLs.
 
