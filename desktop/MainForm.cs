@@ -31,7 +31,7 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
-        Text = "AssetRaider 0.3.4 — Udio + Suno WAV Recorder";
+        Text = "AssetRaider 0.3.5 — Udio + Suno WAV Recorder";
         MinimumSize = new Size(960, 760); Size = new Size(1160, 880);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10);
@@ -116,6 +116,9 @@ public sealed class MainForm : Form
         grid.Columns.Add(new DataGridViewCheckBoxColumn { DataPropertyName = nameof(Track.Selected), HeaderText = "✓", Width = 44 });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Title), HeaderText = "Song", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 45, ReadOnly = true });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Duration), HeaderText = "Length", Width = 70, ReadOnly = true });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.SourceQualityText), HeaderText = "Source quality", Width = 255, ReadOnly = true,
+            DefaultCellStyle = new DataGridViewCellStyle { WrapMode = DataGridViewTriState.True, Font = new Font("Segoe UI", 9) },
+            ToolTipText = "Encoding reported by Chrome for this song. ~kbps is an approximate stream average. Unknown means unavailable; WAV output settings are separate." });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Status), HeaderText = "Status", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 55, ReadOnly = true });
         grid.DataSource = tracks;
         grid.CurrentCellDirtyStateChanged += (_, _) => { if (grid.IsCurrentCellDirty) grid.CommitEdit(DataGridViewDataErrorContexts.Commit); };
@@ -230,7 +233,7 @@ public sealed class MainForm : Form
             var terminal = message.StartsWith("Saved") || message.StartsWith("Failed") || message.StartsWith("Already") || message.StartsWith("Stopped");
             track.Status = message; tracks.ResetItem(tracks.IndexOf(track));
             progress.Value = (int)(fraction * 100); status.Text = $"{track.Title} — {message}";
-            if (terminal) log.AppendText($"{DateTime.Now:HH:mm:ss}  {track.Title}: {message}{Environment.NewLine}");
+            if (terminal) log.AppendText($"{DateTime.Now:HH:mm:ss}  {track.Title}: {message} | Source: {track.SourceQualityText}{Environment.NewLine}");
         }, token, recordAgain);
         var saved = selected.Count(t => t.Status == "Saved WAV");
         var skipped = selected.Count(t => t.Status.StartsWith("Already saved:"));
@@ -238,7 +241,7 @@ public sealed class MainForm : Form
     }
     internal void CheckUi(string directory)
     {
-        catalog.Add(new() { Id = "ExampleTrack0001", Title = "Night Drive", Selected = true });
+        catalog.Add(new() { Id = "ExampleTrack0001", Title = "Night Drive", Selected = true, SourceQuality = new("MP3", 44100, 96000, 2) });
         catalog.Add(new() { Id = "ExampleTrack0002", Title = "Sunrise" });
         search.Text = "night";
         if (tracks.Count != 1 || tracks[0].Title != "Night Drive") throw new Exception("Visible track-name filter failed.");

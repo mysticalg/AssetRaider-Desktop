@@ -9,6 +9,13 @@ public sealed class Track : System.ComponentModel.INotifyPropertyChanged
     public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
     private bool selected;
     private string status = "Ready";
+    private SourceQuality? sourceQuality;
+    public SourceQuality? SourceQuality
+    {
+        get => sourceQuality;
+        set { if (sourceQuality == value) return; sourceQuality = value; PropertyChanged?.Invoke(this, new(nameof(SourceQualityText))); }
+    }
+    public string SourceQualityText => SourceQuality?.Display ?? "Detected during recording";
     public bool Selected { get => selected; set { selected = value; PropertyChanged?.Invoke(this, new(nameof(Selected))); } }
     public string Id { get; set; } = "";
     public string Title { get; set; } = "";
@@ -19,7 +26,7 @@ public sealed class Track : System.ComponentModel.INotifyPropertyChanged
     public string Url => MusicSite.FromId(Site).Id == "suno" ? "https://suno.com/song/" + Id : "https://www.udio.com/songs/" + Id;
 }
 
-public sealed record Completed(string Id, string Title, string FileName, long Bytes, double Seconds);
+public sealed record Completed(string Id, string Title, string FileName, long Bytes, double Seconds, SourceQuality? SourceQuality = null);
 
 public sealed class RecordingLibrary(string directory)
 {
@@ -41,6 +48,7 @@ public sealed class RecordingLibrary(string directory)
         }
     }
     public bool IsComplete(Track track) => CompletedPath(track) != null;
+    public SourceQuality CompletedQuality(Track track) => entries.TryGetValue(track.Key, out var entry) ? entry.SourceQuality ?? SourceQuality.Unknown : SourceQuality.Unknown;
     public string? CompletedPath(Track track)
     {
         if (!entries.TryGetValue(track.Key, out var entry) || Path.GetFileName(entry.FileName) != entry.FileName) return null;
@@ -76,7 +84,7 @@ public sealed class RecordingLibrary(string directory)
         using (var reader = new WaveFileReader(partial))
             if (reader.TotalTime.TotalSeconds < seconds - 1) throw new IOException("The WAV is shorter than the song; it was kept as a partial recording.");
         File.Move(partial, final, false);
-        entries[track.Key] = new(track.Id, track.Title, Path.GetFileName(final), new FileInfo(final).Length, seconds);
+        entries[track.Key] = new(track.Id, track.Title, Path.GetFileName(final), new FileInfo(final).Length, seconds, track.SourceQuality);
         var temp = LedgerPath + ".tmp";
         File.WriteAllText(temp, JsonSerializer.Serialize(entries, new JsonSerializerOptions { WriteIndented = true }));
         File.Move(temp, LedgerPath, true);

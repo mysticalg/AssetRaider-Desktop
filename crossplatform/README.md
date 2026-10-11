@@ -1,5 +1,12 @@
 # AssetRaider 0.4.3 beta — macOS and Linux
 
+## Source quality
+
+Each recording shows the codec, approximate stream bitrate (`~kbps`), sample rate (`kHz`) and channels reported by Chrome for its selected player. Detection starts during preparation/playback, not scanning. Unknown values mean Chrome did not expose reliable metadata. Bitrate is a stream average and may include headers/container overhead; it is withheld for video/multiple-audio resources. These figures describe the playback input, independently of the 48 kHz / 16-bit stereo WAV output.
+
+Detected values are saved with the completed-track history. Skipped older WAVs without stored source metadata show unknown; the app cannot infer their original encoding from the WAV. Detection does not download a second audio copy or retain stream URLs.
+
+
 This update fixes Suno recordings failing with **A different player attempted to start** when animated cover art plays beside the song. The cover video is kept paused during capture, while the song audio remains the recording timer. Stopping preparation now cancels it promptly, and old cleanup cannot remove a retry's playback hook. Protection against a genuinely different audio track remains enabled.
 
 

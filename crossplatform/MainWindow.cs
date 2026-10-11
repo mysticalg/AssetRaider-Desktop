@@ -37,7 +37,7 @@ public sealed class MainWindow : Window
 
     public MainWindow()
     {
-        Title = "AssetRaider 0.4.4 beta — Udio + Suno to WAV"; Width = 1120; Height = 820; MinWidth = 960; MinHeight = 760;
+        Title = "AssetRaider 0.4.5 beta — Udio + Suno to WAV"; Width = 1120; Height = 820; MinWidth = 960; MinHeight = 760;
         Background = Brush.Parse("#101810");
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto"), Margin = new Thickness(24), RowSpacing = 12 };
         void Row(Control control, int row) { Grid.SetRow(control, row); root.Children.Add(control); }
@@ -89,12 +89,16 @@ public sealed class MainWindow : Window
         list.ItemsSource = tracks;
         list.Background = Brush.Parse("#192219"); list.BorderBrush = Brush.Parse("#34422E"); list.BorderThickness = new Thickness(1);
         list.ItemTemplate = new FuncDataTemplate<Track>((track, _) => {
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,2*,Auto,3*"), ColumnSpacing = 14, Margin = new Thickness(4, 7) };
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,2*,Auto,2*,2*"), ColumnSpacing = 14, Margin = new Thickness(4, 7) };
             var selected = new CheckBox { VerticalAlignment = VerticalAlignment.Center }; selected.Bind(CheckBox.IsCheckedProperty, new Binding(nameof(Track.Selected)) { Source = track, Mode = BindingMode.TwoWay });
             row.Children.Add(selected);
             var name = new TextBlock { Text = track.Title, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(name, 1); row.Children.Add(name);
             var length = new TextBlock { Text = track.Duration, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(length, 2); row.Children.Add(length);
-            var detail = new TextBlock { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center }; detail.Bind(TextBlock.TextProperty, new Binding(nameof(Track.Status)) { Source = track }); Grid.SetColumn(detail, 3); row.Children.Add(detail);
+            var quality = new TextBlock { TextWrapping = TextWrapping.Wrap, FontSize = 12, Foreground = Brush.Parse("#BCD49F"), VerticalAlignment = VerticalAlignment.Center };
+            quality.Bind(TextBlock.TextProperty, new Binding(nameof(Track.SourceQualityText)) { Source = track, StringFormat = "Source: {0}" });
+            ToolTip.SetTip(quality, "Encoding reported by Chrome. ~kbps is an approximate stream average. Unknown means unavailable; WAV output settings are separate.");
+            Grid.SetColumn(quality, 3); row.Children.Add(quality);
+            var detail = new TextBlock { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center }; detail.Bind(TextBlock.TextProperty, new Binding(nameof(Track.Status)) { Source = track }); Grid.SetColumn(detail, 4); row.Children.Add(detail);
             return row;
         }); Row(list, 4);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
@@ -107,6 +111,12 @@ public sealed class MainWindow : Window
         Row(status, 7); Row(progress, 8); Row(log, 9); Content = root;
         SetStatus(OperatingSystem.IsMacOS() ? "First recording: macOS will request Screen & System Audio Recording permission. Only audio from the dedicated Chrome app is requested. Keep the Mac awake during recording." : "Linux: requires PulseAudio or PipeWire-Pulse and pulseaudio-utils. The dedicated Chrome audio goes to a silent recording channel. Keep the computer awake during recording.");
         UpdateCount(); Closing += OnClosing;
+    }
+    internal void SeedUiCheck()
+    {
+        catalog.Add(new Track { Id = "ExampleTrack0001", Title = "Night Drive", Duration = "3:24", SourceQuality = new("MP3", 44100, 96000, 2) });
+        catalog.Add(new Track { Id = "ExampleTrack0002", Title = "Sunrise", Duration = "2:48", SourceQuality = SourceQuality.Unknown });
+        RefreshTracks();
     }
     private Button Button(string label, Action action)
     {
@@ -170,7 +180,7 @@ public sealed class MainWindow : Window
         SetStatus($"Recording {selected.Length} tracks. Keep the dedicated Chrome window open and the computer awake.");
         await new RecorderQueue(browser).RunAsync(selected, folder.Text ?? "", (track, message, fraction) => {
             track.Status = message; progress.Value = fraction * 100; status.Text = track.Title + " — " + message;
-            if (message.StartsWith("Saved") || message.StartsWith("Failed") || message.StartsWith("Already")) SetStatus(status.Text);
+            if (message.StartsWith("Saved") || message.StartsWith("Failed") || message.StartsWith("Already")) SetStatus(status.Text + " | Source: " + track.SourceQualityText);
         }, token, recordAgain);
         var saved = selected.Count(t => t.Status == "Saved WAV");
         var skipped = selected.Count(t => t.Status.StartsWith("Already saved:"));

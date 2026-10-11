@@ -37,6 +37,7 @@ public sealed class App : Application
             if (Program.UiCheckDirectory is { } directory)
             {
                 window.Width = window.MinWidth; window.Height = window.MinHeight;
+                window.SeedUiCheck();
                 window.Opened += (_, _) => DispatcherTimer.RunOnce(() => {
                     try
                     {

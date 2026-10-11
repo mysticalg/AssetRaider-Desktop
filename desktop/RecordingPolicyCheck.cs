@@ -11,7 +11,7 @@ internal static class RecordingPolicyCheck
         {
             var folder = Path.Combine(directory, site);
             var library = new RecordingLibrary(folder); library.Load();
-            var track = new Track { Id = "RepeatRecording0001", Title = "Original title", Site = site };
+            var track = new Track { Id = "RepeatRecording0001", Title = "Original title", Site = site, SourceQuality = new("MP3", 44100, 96000, 2) };
             var paths = library.Allocate(track);
             WriteWav(paths.Partial);
             library.Complete(track, paths.Partial, paths.Final, 2);
@@ -26,6 +26,7 @@ internal static class RecordingPolicyCheck
             track.Title = "Renamed title";
             await queue.RunAsync([track], folder, Update, CancellationToken.None);
             Require(browser.Attempts == 0 && messages.Single().Contains(paths.Final), "Resume must skip and identify the existing WAV, including after a rename.");
+            Require(track.SourceQuality == new SourceQuality("MP3", 44100, 96000, 2), "Skipping an existing recording lost its measured source quality.");
 
             messages.Clear();
             await queue.RunAsync([track], folder, Update, CancellationToken.None, recordAgain: true);
@@ -40,6 +41,7 @@ internal static class RecordingPolicyCheck
             Require(library.Allocate(track).Final != repeat.Final, "Interrupted repeat recording would be overwritten.");
             library.Complete(track, repeat.Partial, repeat.Final, 2);
             var reloaded = new RecordingLibrary(folder); reloaded.Load();
+            Require(reloaded.CompletedQuality(track) == track.SourceQuality, "Source quality was not restored with the saved recording.");
             Require(reloaded.CompletedPath(track) == repeat.Final && File.ReadAllBytes(paths.Final).SequenceEqual(original), "Completed repeat must point to the new copy and preserve the old WAV.");
 
             File.WriteAllBytes(repeat.Final, new byte[12]);

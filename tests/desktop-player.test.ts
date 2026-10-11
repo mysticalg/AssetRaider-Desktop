@@ -28,6 +28,7 @@ describe("desktop Udio playback controller", () => {
     expect(audio.loop).toBe(false);
     expect(audio.volume).toBe(1);
     expect(audio.muted).toBe(false);
+    expect(api().state().Source).toBe("blob:song");
     await api().start();
     expect(play).toHaveBeenCalledTimes(2);
     api().stop();
@@ -75,6 +76,7 @@ describe("desktop Udio playback controller", () => {
     await api().start();
     expect(audio.currentTime).toBe(0);
     expect(api().state().Duration).toBe(120);
+    expect(api().state().Source).toBe("blob:song");
     expect(play).toHaveBeenCalledTimes(3);
   });
 

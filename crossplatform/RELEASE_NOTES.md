@@ -1,6 +1,8 @@
-# AssetRaider 0.4.4 — macOS and Linux beta
+# AssetRaider 0.4.5 — macOS and Linux beta
 
-**Interface refresh in 0.4.4:** new waveform app icon, grouped library controls, a larger track-list area, and a prominent green Record button. The icon is included in the Mac app bundle and Linux applications menu. Playback and capture are unchanged; source bitrate detection is not included.
+**New in 0.4.5:** per-track source quality: codec, approximate browser-reported stream bitrate, sample rate and channels. Values update during recording and are saved in the completed-track history. Missing/ambiguous metadata stays unknown; video or multiple-audio-track resources do not receive an audio bitrate estimate. The generated app icon and refreshed layout remain included.
+
+Bitrate may include headers/container overhead and is labelled `~`. This is the playback source quality, separate from the unchanged 48 kHz / 16-bit WAV output. Detection begins with recording; the library scan does not play every track. Older saved tracks without source metadata show unknown. No stream URLs are stored.
 
 **Playback fix included:** fixes Suno animated cover video causing a false different-player error. Video is paused during capture, audio remains the timer, and stop/retry cleanup cannot break a newer attempt. Different audio tracks still trigger protection.
 
@@ -12,9 +14,9 @@ AssetRaider now has desktop builds for **Apple Silicon Macs, Intel Macs, and Lin
 
 | Download | Requirements |
 | --- | --- |
-| `AssetRaider-0.4.4-osx-arm64.zip` | Apple Silicon, macOS 14+, Google Chrome |
-| `AssetRaider-0.4.4-osx-x64.zip` | Intel Mac, macOS 14+, Google Chrome |
-| `AssetRaider-0.4.4-linux-x64.tar.gz` | Ubuntu 22.04+ or comparable x86-64 desktop, native Google Chrome, PulseAudio/PipeWire-Pulse and pulseaudio-utils |
+| `AssetRaider-0.4.5-osx-arm64.zip` | Apple Silicon, macOS 14+, Google Chrome |
+| `AssetRaider-0.4.5-osx-x64.zip` | Intel Mac, macOS 14+, Google Chrome |
+| `AssetRaider-0.4.5-linux-x64.tar.gz` | Ubuntu 22.04+ or comparable x86-64 desktop, native Google Chrome, PulseAudio/PipeWire-Pulse and pulseaudio-utils |
 
 **Mac:** extract the ZIP, move AssetRaider.app to Applications. Grant Screen & System Audio Recording permission when requested. The helper requests audio only from the dedicated Chrome application, not microphone audio or saved screen video. These beta builds are ad-hoc signed, **not Apple Developer ID signed or notarized**; macOS may block opening downloaded apps.
 
@@ -26,4 +28,4 @@ AssetRaider now has desktop builds for **Apple Silicon Macs, Intel Macs, and Lin
 
 WAV output is 48 kHz / 16-bit stereo, at normal playback speed. It preserves playback quality, not an original master. Use audio you have permission to record. SHA256SUMS.txt covers all downloads.
 
-[Full installation guide](https://github.com/mysticalg/AssetRaider-Desktop/blob/main/crossplatform/README.md) · [Windows 0.3.4 downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.4-beta.1) · [Report an issue](https://github.com/mysticalg/AssetRaider-Desktop/issues)
+[Full installation guide](https://github.com/mysticalg/AssetRaider-Desktop/blob/main/crossplatform/README.md) · [Windows 0.3.5 downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.5-beta.1) · [Report an issue](https://github.com/mysticalg/AssetRaider-Desktop/issues)

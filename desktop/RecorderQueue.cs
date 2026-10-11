@@ -7,6 +7,7 @@ public interface IRecordingBrowser
 {
     MusicSite Site { get; }
     int ProcessId { get; }
+    SourceQuality SourceQuality => SourceQuality.Unknown;
     Task<double> PrepareAsync(Track track, CancellationToken cancellation);
     Task StartAsync();
     Task<PlayerState> StateAsync();
@@ -29,13 +30,16 @@ public sealed class RecorderQueue(IRecordingBrowser browser)
                 cancellation.ThrowIfCancellationRequested();
                 if (!recordAgain && library.CompletedPath(track) is { } savedPath)
                 {
+                    track.SourceQuality = library.CompletedQuality(track);
                     update(track, "Already saved: " + savedPath + " — use Record again (new copy) to re-record.", 1);
                     continue;
                 }
                 try
                 {
+                    track.SourceQuality = SourceQuality.Unknown;
                     update(track, "Preparing playback…", 0);
                     var duration = await browser.PrepareAsync(track, cancellation);
+                    track.SourceQuality = browser.SourceQuality;
                     cancellation.ThrowIfCancellationRequested();
                     var root = Path.GetPathRoot(Path.GetFullPath(directory))!;
                     if (new DriveInfo(root).AvailableFreeSpace < duration * 192000 + 50_000_000) throw new IOException("Not enough free disk space for this song.");
@@ -52,6 +56,7 @@ public sealed class RecorderQueue(IRecordingBrowser browser)
                             if (capture.Fault != null) throw capture.Fault;
                             var state = await browser.StateAsync().WaitAsync(TimeSpan.FromSeconds(10), cancellation);
                             if (state.Error.Length > 0) throw new IOException(state.Error);
+                            track.SourceQuality = browser.SourceQuality;
                             if (state.Elapsed + .3 < previous && !state.Done) throw new IOException("Playback jumped backwards. Recording kept as partial.");
                             if (state.Elapsed > previous + 3) throw new IOException("Playback jumped forwards. Recording kept as partial.");
                             previous = state.Elapsed;

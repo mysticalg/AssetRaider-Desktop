@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>AssetRaider</AssemblyName>
     <RootNamespace>AssetRaider.Desktop</RootNamespace>
-    <Version>0.4.4</Version>
+    <Version>0.4.5</Version>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <DebugType>none</DebugType>
   </PropertyGroup>
@@ -18,5 +18,6 @@
     <Compile Include="../desktop/Models.cs;../desktop/MusicSite.cs;../desktop/MusicBrowser.cs;../desktop/BrowserData.cs;../desktop/RecorderQueue.cs;../desktop/RecordingPolicyCheck.cs;../desktop/LibraryScan.cs;../desktop/LibraryScanCheck.cs" Link="Shared/%(Filename)%(Extension)" />
     <EmbeddedResource Include="../desktop/Scripts/*.js" LogicalName="AssetRaider.Desktop.Scripts.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../brand/app-icon.png" LogicalName="AssetRaider.Brand.Icon.png" />
+    <Compile Include="../desktop/SourceQuality.cs;../desktop/SourceQualityCheck.cs" Link="Shared/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

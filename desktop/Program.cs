@@ -7,6 +7,7 @@ internal static class Program
     {
         if (args.Contains("--self-test")) return SelfTest.RunAsync(args.Last()).GetAwaiter().GetResult();
         if (args.Contains("--launch-check")) return SelfTest.CheckLaunch(args.Last());
+        if (args.Contains("--quality-check")) return SourceQualityCheck.RunBrowserAsync(args.Last()).GetAwaiter().GetResult();
         if (args.Contains("--ui-check"))
         {
             ApplicationConfiguration.Initialize();

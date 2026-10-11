@@ -23,6 +23,7 @@ internal static class CrossCheck
             foreach (var name in new[] { "player", "library", "scroll", "pagination" }) if (MusicBrowser.Script(name).Length < 30) throw new Exception("Missing browser script: " + name);
             using (var driver = Playwright.CreateAsync().GetAwaiter().GetResult()) { }
             LibraryScanCheck.RunAsync().GetAwaiter().GetResult();
+            SourceQualityCheck.Run();
             RecordingPolicyCheck.RunAsync(Path.Combine(directory, "repeat-" + Guid.NewGuid().ToString("N"))).GetAwaiter().GetResult();
             var track = new Track { Id = "ExampleTrack0001", Title = "Sample: song/unsafe?*" };
             var suno = new Track { Id = track.Id, Title = track.Title, Site = "suno" };

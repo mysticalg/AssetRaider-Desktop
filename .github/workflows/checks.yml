@@ -25,9 +25,22 @@ jobs:
         shell: pwsh
         run: |
           $report = Join-Path $env:RUNNER_TEMP 'installer-check.json'
-          $check = Start-Process ./output/releases/AssetRaider-0.3.4-Setup.exe -ArgumentList '--verify-install', ('"' + $report + '"') -Wait -PassThru
+          $check = Start-Process ./output/releases/AssetRaider-0.3.5-Setup.exe -ArgumentList '--verify-install', ('"' + $report + '"') -Wait -PassThru
           Get-Content $report
           if ($check.ExitCode -ne 0) { throw 'Installer checks failed.' }
+      - name: Verify source quality in isolated Chrome
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory output/quality-check -Force | Out-Null
+          Copy-Item tests/fixtures/source-96k-44100.mp3 output/quality-check/
+          $check = Start-Process ./output/desktop-0.3.5/AssetRaider.exe -ArgumentList '--quality-check', 'output/quality-check' -Wait -PassThru -WindowStyle Hidden
+          Get-Content output/quality-check/quality-check.json
+          if ($check.ExitCode -ne 0) { throw 'Source quality detection failed.' }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-quality-check
+          path: output/quality-check/quality-check.json
       - uses: actions/upload-artifact@v4
         with:
           name: windows-downloads

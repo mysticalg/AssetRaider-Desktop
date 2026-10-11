@@ -4,7 +4,7 @@ using Microsoft.Playwright;
 
 namespace AssetRaider.Desktop;
 
-public sealed record PlayerState(double Duration, double Elapsed, bool Done, string Error);
+public sealed record PlayerState(double Duration, double Elapsed, bool Done, string Error, string Source = "");
 public sealed record ScrollState(bool Bottom, double Position);
 public sealed record PageChange(bool Changed, string Error);
 
@@ -14,6 +14,9 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
     private IPlaywright? playwright;
     private IBrowser? browser;
     private IPage? page;
+    private SourceQualityMonitor? qualityMonitor;
+    private string preparedSource = "";
+    public SourceQuality SourceQuality => qualityMonitor?.Read(preparedSource) ?? SourceQuality.Unknown;
     private Process? process;
     private Process? loginProcess;
     public int ProcessId => process is { HasExited: false } ? process.Id : throw new IOException("The app's Chrome window was closed. Load the library again.");
@@ -159,16 +162,29 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
         await ConnectAsync();
         var tab = Page;
         // Reload each exact song URL so a previous player or autoplay queue cannot select another song.
+        if (qualityMonitor != null) await qualityMonitor.DisposeAsync();
+        preparedSource = "";
+        qualityMonitor = await SourceQualityMonitor.AttachAsync(tab);
+        cancellation.ThrowIfCancellationRequested();
         await tab.GotoAsync(track.Url, new() { WaitUntil = WaitUntilState.DOMContentLoaded });
         await tab.Locator(Site.PlaySelector + ":visible").First.WaitForAsync();
         cancellation.ThrowIfCancellationRequested();
-        return await tab.EvaluateAsync<double>(Script("player"), new { site = Site.Id, id = track.Id }).WaitAsync(cancellation);
+        var duration = await tab.EvaluateAsync<double>(Script("player"), new { site = Site.Id, id = track.Id }).WaitAsync(cancellation);
+        await StateAsync().WaitAsync(cancellation);
+        return duration;
     }
     public Task StartAsync() => Page.EvaluateAsync("() => window.__assetRaiderDesktop.start()");
-    public Task<PlayerState> StateAsync() => BrowserData.ReadAsync<PlayerState>(Page, "() => window.__assetRaiderDesktop.state()");
+    public async Task<PlayerState> StateAsync()
+    {
+        var state = await BrowserData.ReadAsync<PlayerState>(Page, "() => window.__assetRaiderDesktop.state()");
+        preparedSource = state.Source;
+        return state;
+    }
     public async Task StopAsync()
     {
         try { if (page is { IsClosed: false }) await page.EvaluateAsync("() => window.__assetRaiderDesktop?.stop()").WaitAsync(TimeSpan.FromSeconds(5)); } catch { }
+        if (qualityMonitor != null) await qualityMonitor.DisposeAsync();
+        qualityMonitor = null; preparedSource = "";
     }
     public async ValueTask DisposeAsync()
     {
