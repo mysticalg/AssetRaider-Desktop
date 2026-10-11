@@ -15,6 +15,12 @@ public sealed class MainWindow : Window
 {
     private readonly MusicBrowser browser = new();
     private readonly ObservableCollection<Track> tracks = [];
+    private readonly LibraryCatalog catalog = new();
+    private readonly TextBox search = new() { Width = 270, Watermark = "Type a track name…" };
+    private readonly Button pauseScan = new() { Content = "Pause scan", IsEnabled = false, Margin = new Thickness(0, 0, 8, 0) };
+    private Button clearScan = null!;
+    private ScanControl? scanControl;
+    private bool clearing;
     private readonly ComboBox site = new() { ItemsSource = new[] { "Udio", "Suno" }, SelectedIndex = 0, Width = 125 };
     private readonly TextBox folder = new();
     private readonly TextBlock status = new() { TextWrapping = TextWrapping.Wrap };
@@ -31,21 +37,30 @@ public sealed class MainWindow : Window
 
     public MainWindow()
     {
-        Title = "AssetRaider 0.4.1 beta — Udio + Suno to WAV"; Width = 1080; Height = 800; MinWidth = 850; MinHeight = 650;
-        var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto"), Margin = new Thickness(24), RowSpacing = 12 };
+        Title = "AssetRaider 0.4.2 beta — Udio + Suno to WAV"; Width = 1080; Height = 800; MinWidth = 850; MinHeight = 650;
+        var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto"), Margin = new Thickness(24), RowSpacing = 12 };
         void Row(Control control, int row) { Grid.SetRow(control, row); root.Children.Add(control); }
         Row(new TextBlock { Text = "AssetRaider / Udio + Suno to WAV", FontSize = 26, FontWeight = FontWeight.Bold }, 0);
-        Row(new TextBlock { Text = "1. Sign in with normal Chrome, then close that window → 2. Load library → 3. Select and record\n48 kHz / 16-bit stereo WAV · Playback speed · About 11 MB per minute", TextWrapping = TextWrapping.Wrap }, 1);
+        Row(new TextBlock { Text = "1. Sign in with normal Chrome, then close that window → 2. Open library / filters, then scan → 3. Select and record\n48 kHz / 16-bit stereo WAV · Playback speed · About 11 MB per minute", TextWrapping = TextWrapping.Wrap }, 1);
         var toolbar = new WrapPanel { Orientation = Orientation.Horizontal };
         toolbar.Children.Add(site);
-        toolbar.Children.Add(Button("Sign in (normal Chrome)", () => Work(async _ => { await browser.OpenLoginAsync(); SetStatus("Sign in in the separate Chrome window, then close it and click Load library."); })));
-        toolbar.Children.Add(Button("Load library", () => Work(Scan)));
+        toolbar.Children.Add(Button("Sign in (normal Chrome)", () => Work(async _ => { await browser.OpenLoginAsync(); SetStatus("Sign in in the separate Chrome window, then close it and click Scan library."); })));
+        toolbar.Children.Add(Button("Open library / filters", () => Work(async _ => { await browser.OpenLibraryAsync(); SetStatus("Choose filters in Chrome, then Scan library. Stop or clear a scan before changing site filters."); })));
+        toolbar.Children.Add(Button("Scan library", () => Work(token => Scan(token))));
+        pauseScan.Click += (_, _) => TogglePause(); toolbar.Children.Add(pauseScan);
+        clearScan = Button("Clear scanned list", async () => await ClearScanAsync()); idle.Remove(clearScan); toolbar.Children.Add(clearScan);
         toolbar.Children.Add(Button("Select all", () => Select(true)));
         toolbar.Children.Add(Button("Select none", () => Select(false)));
-        toolbar.Children.Add(count); Row(toolbar, 2);
+        Row(toolbar, 2);
+        var searchBar = new WrapPanel { Orientation = Orientation.Horizontal };
+        searchBar.Children.Add(new TextBlock { Text = "Track name  ", VerticalAlignment = VerticalAlignment.Center });
+        search.TextChanged += (_, _) => RefreshTracks(); searchBar.Children.Add(search);
+        searchBar.Children.Add(Button("Find in library", () => Work(token => Scan(token, true))));
+        search.KeyDown += (_, e) => { if (e.Key == Avalonia.Input.Key.Enter) { e.Handled = true; Work(token => Scan(token, true)); } };
+        searchBar.Children.Add(count); Row(searchBar, 3);
         site.SelectionChanged += (_, _) => {
             if (resettingSite || cancellation != null) return;
-            Work(async _ => { await browser.SelectSiteAsync(site.SelectedIndex == 1 ? MusicSite.Suno : MusicSite.Udio); tracks.Clear(); UpdateCount(); SetStatus(browser.Site.Name + " selected."); });
+            Work(async _ => { await browser.SelectSiteAsync(site.SelectedIndex == 1 ? MusicSite.Suno : MusicSite.Udio); catalog.Clear(); RefreshTracks(); SetStatus(browser.Site.Name + " selected. Open library / filters, then Scan library."); });
         };
         var destination = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto"), ColumnSpacing = 10 };
         destination.Children.Add(new TextBlock { Text = "Save to", VerticalAlignment = VerticalAlignment.Center });
@@ -59,7 +74,7 @@ public sealed class MainWindow : Window
         var open = Button("Open", () => Work(_ => {
             var path = Path.GetFullPath(folder.Text ?? ""); Directory.CreateDirectory(path);
             var start = new ProcessStartInfo(OperatingSystem.IsMacOS() ? "/usr/bin/open" : "xdg-open") { UseShellExecute = false }; start.ArgumentList.Add(path); Process.Start(start)?.Dispose(); return Task.CompletedTask;
-        })); Grid.SetColumn(open, 3); destination.Children.Add(open); Row(destination, 3);
+        })); Grid.SetColumn(open, 3); destination.Children.Add(open); Row(destination, 4);
         list.ItemsSource = tracks;
         list.ItemTemplate = new FuncDataTemplate<Track>((track, _) => {
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,2*,Auto,3*"), ColumnSpacing = 14, Margin = new Thickness(4, 7) };
@@ -69,12 +84,12 @@ public sealed class MainWindow : Window
             var length = new TextBlock { Text = track.Duration, VerticalAlignment = VerticalAlignment.Center }; Grid.SetColumn(length, 2); row.Children.Add(length);
             var detail = new TextBlock { TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center }; detail.Bind(TextBlock.TextProperty, new Binding(nameof(Track.Status)) { Source = track }); Grid.SetColumn(detail, 3); row.Children.Add(detail);
             return row;
-        }); Row(list, 4);
+        }); Row(list, 5);
         var actions = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10 };
         actions.Children.Add(Button("Record selected as WAV", () => Work(token => Record(token, false))));
         actions.Children.Add(Button("Record again (new copy)", () => Work(token => Record(token, true)))); actions.Children.Add(stop);
-        stop.Click += (_, _) => { cancellation?.Cancel(); SetStatus("Stopping… unfinished recordings remain partial."); }; Row(actions, 5);
-        Row(status, 6); Row(progress, 7); Row(log, 8); Content = root;
+        stop.Click += (_, _) => { cancellation?.Cancel(); SetStatus(scanControl != null ? "Stopping scan… tracks found will be kept." : "Stopping… unfinished recordings remain partial."); }; Row(actions, 6);
+        Row(status, 7); Row(progress, 8); Row(log, 9); Content = root;
         SetStatus(OperatingSystem.IsMacOS() ? "First recording: macOS will request Screen & System Audio Recording permission. Only audio from the dedicated Chrome app is requested. Keep the Mac awake during recording." : "Linux: requires PulseAudio or PipeWire-Pulse and pulseaudio-utils. The dedicated Chrome audio goes to a silent recording channel. Keep the computer awake during recording.");
         UpdateCount(); Closing += OnClosing;
     }
@@ -84,31 +99,52 @@ public sealed class MainWindow : Window
         result.Click += (_, _) => action(); idle.Add(result); return result;
     }
     private void Select(bool selected) { foreach (var track in tracks) track.Selected = selected; UpdateCount(); }
-    private void UpdateCount() => count.Text = $"{tracks.Count(t => t.Selected)} selected / {tracks.Count}";
+    private void UpdateCount() => count.Text = $"{tracks.Count(t => t.Selected)} selected / {tracks.Count} shown / {catalog.Count} scanned";
+    private void RefreshTracks() { tracks.Clear(); foreach (var track in catalog.Matching(search.Text)) tracks.Add(track); UpdateCount(); }
+    private void TogglePause()
+    {
+        if (scanControl == null) return;
+        if (scanControl.PauseRequested) { scanControl.Resume(); pauseScan.Content = "Pause scan"; SetStatus("Resuming scan from the same position…"); }
+        else { scanControl.Pause(); pauseScan.Content = "Resume scan"; SetStatus("Pausing after the current browser step…"); }
+    }
+    private async Task ClearScanAsync()
+    {
+        if (clearing || (operation is { IsCompleted: false } && scanControl == null)) return;
+        clearing = true; clearScan.IsEnabled = false;
+        try {
+            cancellation?.Cancel(); if (operation != null) await operation;
+            catalog.Clear(); RefreshTracks(); progress.Value = 0;
+            SetStatus("Scanned list cleared. Saved WAVs are untouched. Choose filters, then Scan library or Find in library to start again.");
+        }
+        finally { clearing = false; clearScan.IsEnabled = true; }
+    }
     private void SetStatus(string text) { status.Text = text; log.Text = $"{DateTime.Now:HH:mm:ss}  {text}\n" + (log.Text ?? ""); if (log.Text.Length > 20000) log.Text = log.Text[..20000]; }
-    private void Work(Func<CancellationToken, Task> action) { if (operation is not { IsCompleted: false }) operation = RunOperation(action); }
+    private void Work(Func<CancellationToken, Task> action) { if (!clearing && operation is not { IsCompleted: false }) operation = RunOperation(action); }
     private async Task RunOperation(Func<CancellationToken, Task> action)
     {
-        cancellation = new(); foreach (var button in idle) button.IsEnabled = false;
+        cancellation = new(); clearScan.IsEnabled = false; search.IsEnabled = false; foreach (var button in idle) button.IsEnabled = false;
         site.IsEnabled = folder.IsEnabled = list.IsEnabled = false; stop.IsEnabled = true; progress.Value = 0;
         try { await action(cancellation.Token); }
-        catch (OperationCanceledException) { SetStatus("Stopped. Completed WAVs are saved; select remaining tracks to resume."); }
+        catch (OperationCanceledException) { SetStatus(scanControl != null ? "Scan stopped. Tracks found are kept; Scan library starts a fresh scan." : "Stopped. Completed WAVs are saved; select remaining tracks to resume."); }
         catch (Exception ex) { SetStatus(ex.Message); }
         finally {
+            scanControl = null; pauseScan.IsEnabled = false; pauseScan.Content = "Pause scan"; clearScan.IsEnabled = !clearing; search.IsEnabled = true;
             cancellation.Dispose(); cancellation = null; foreach (var button in idle) button.IsEnabled = true;
             resettingSite = true; site.SelectedIndex = browser.Site.Id == "suno" ? 1 : 0; resettingSite = false;
             site.IsEnabled = folder.IsEnabled = list.IsEnabled = true; stop.IsEnabled = false;
         }
     }
-    private async Task Scan(CancellationToken token)
+    private async Task Scan(CancellationToken token, bool find = false)
     {
-        SetStatus("Loading " + browser.Site.Name + " library/workspace… Stop keeps tracks already found.");
-        var selections = tracks.Where(t => t.Selected).Select(t => t.Key).ToHashSet(); var cleared = false;
+        scanControl = new(); pauseScan.IsEnabled = true; clearScan.IsEnabled = true; search.IsEnabled = true;
+        scanControl.Paused = () => SetStatus("Scan paused. Resume continues from here. Clear scanned list starts over; change site filters between scans.");
+        catalog.Clear(); RefreshTracks();
+        var query = find ? search.Text?.Trim() ?? "" : null;
+        SetStatus(find && browser.Site.Id == "suno" ? "Searching Suno's library for the entered name…" : "Scanning the current filtered library. Search names as tracks arrive; Pause scan keeps your position.");
         SetStatus(await browser.ScanAsync(fresh => {
-            if (!cleared) { tracks.Clear(); cleared = true; }
-            foreach (var track in fresh) { track.Selected = selections.Contains(track.Key); track.PropertyChanged += (_, _) => UpdateCount(); tracks.Add(track); }
-            UpdateCount(); status.Text = $"Loading… {tracks.Count} tracks found";
-        }, token));
+            foreach (var track in fresh) if (catalog.Add(track)) track.PropertyChanged += (_, _) => UpdateCount();
+            RefreshTracks(); status.Text = $"Scanning… {catalog.Count} tracks found, {tracks.Count} match the name filter";
+        }, scanControl, token, query));
     }
     private async Task Record(CancellationToken token, bool recordAgain)
     {

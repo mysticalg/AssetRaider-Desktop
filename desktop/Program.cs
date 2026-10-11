@@ -7,6 +7,11 @@ internal static class Program
     {
         if (args.Contains("--self-test")) return SelfTest.RunAsync(args.Last()).GetAwaiter().GetResult();
         if (args.Contains("--launch-check")) return SelfTest.CheckLaunch(args.Last());
+        if (args.Contains("--ui-check"))
+        {
+            ApplicationConfiguration.Initialize();
+            using var form = new MainForm(); form.CheckUi(args.Last()); return 0;
+        }
         using var mutex = new Mutex(true, "Local\\AssetRaiderDesktop", out var first);
         if (!first) { MessageBox.Show("AssetRaider is already running."); return 0; }
         ApplicationConfiguration.Initialize();

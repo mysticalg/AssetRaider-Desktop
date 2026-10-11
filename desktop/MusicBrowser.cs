@@ -55,7 +55,7 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
     }
     public async Task OpenLoginAsync()
     {
-        if (loginProcess is { HasExited: false }) throw new IOException("The normal Chrome sign-in window is already open. Finish signing in there, then close that window and click Load library.");
+        if (loginProcess is { HasExited: false }) throw new IOException("The normal Chrome sign-in window is already open. Finish signing in there, then close that window and click Scan library.");
         await DisposeAsync();
         var profile = Path.Combine(AppData, Site.ProfileFolder);
         Directory.CreateDirectory(profile);
@@ -72,7 +72,7 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
     private async Task ConnectAsync()
     {
         if (browser?.IsConnected == true && page is { IsClosed: false }) return;
-        if (loginProcess is { HasExited: false }) throw new IOException($"After signing into {Site.Name}, close its separate Chrome sign-in window, then click Load library again. This lets Chrome save the login before recording starts.");
+        if (loginProcess is { HasExited: false }) throw new IOException($"After signing into {Site.Name}, close its separate Chrome sign-in window, then click Scan library again. This lets Chrome save the login before recording starts.");
         await DisposeAsync();
         var profile = Path.Combine(AppData, Site.ProfileFolder);
         Directory.CreateDirectory(profile);
@@ -98,48 +98,50 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
         page.SetDefaultNavigationTimeout(30000);
         if (!Site.OwnsUrl(page.Url)) await page.GotoAsync(Site.LibraryUrl);
     }
-    private IPage Page => browser?.IsConnected == true && page is { IsClosed: false } ? page : throw new IOException("Sign in, then Load library first.");
+    private IPage Page => browser?.IsConnected == true && page is { IsClosed: false } ? page : throw new IOException("Sign in, then Scan library first.");
 
-    public async Task<string> ScanAsync(Action<Track[]> found, CancellationToken cancellation)
+    public async Task OpenLibraryAsync()
     {
         await ConnectAsync();
-        cancellation.ThrowIfCancellationRequested();
+        if (!Site.IsLibraryUrl(Page.Url))
+            await Page.GotoAsync(Site.LibraryUrl, new() { WaitUntil = WaitUntilState.DOMContentLoaded });
+        await Page.BringToFrontAsync();
+    }
+
+    public async Task<string> ScanAsync(Action<Track[]> found, ScanControl control, CancellationToken cancellation, string? search = null)
+    {
+        await ConnectAsync();
+        await control.CheckpointAsync(cancellation);
         var tab = Page;
         if (!Site.IsLibraryUrl(tab.Url))
             await tab.GotoAsync(Site.LibraryUrl, new() { WaitUntil = WaitUntilState.DOMContentLoaded });
-        try { await tab.Locator(Site.LinkSelector).First.WaitForAsync(new() { Timeout = 20000 }); }
-        catch (TimeoutException) { throw new IOException($"No {Site.Name} library tracks are visible. Use Sign in (normal Chrome), finish signing in and close that window, then Load library. Also check library filters and the selected workspace."); }
-        await BrowserData.ReadAsync<ScrollState>(tab, Script("scroll"), new { reset = true, site = Site.Id });
-        var seen = new HashSet<string>();
-        var unchanged = 0;
-        var deadline = DateTime.UtcNow.AddMinutes(10);
-        if (Site.Id == "suno")
+        if (search != null && Site.Id == "suno")
         {
-            // Begin at the first page of the user's selected workspace. Pagination must actually advance.
-            while (await ChangeSunoPageAsync(tab, "previous", cancellation))
-                if (DateTime.UtcNow >= deadline) throw new IOException("Could not reach the first workspace page within the scan time limit.");
+            // Use Suno's library search so older matches can be found without scanning every song.
+            var input = tab.GetByPlaceholder("Search", new() { Exact = true });
+            try { await input.FillAsync(search, new() { Timeout = 15000 }); }
+            catch (TimeoutException) { throw new IOException("Suno's library search is not visible. Open library / filters, choose Songs, then search again."); }
+            await Task.Delay(1800, cancellation); // Allow the site's debounced search to replace old rows.
         }
-        while (DateTime.UtcNow < deadline)
+        await control.CheckpointAsync(cancellation);
+        try { await tab.Locator(Site.LinkSelector).First.WaitForAsync(new() { Timeout = 12000 }); }
+        catch (TimeoutException) { return $"No {Site.Name} tracks found in this view. Check the search, filters and sign-in in Open library / filters. The scanned list is empty."; }
+        return await LibraryScanner.RunAsync(new BrowserScanSource(tab, Site, search), control, found, cancellation);
+    }
+
+    private sealed class BrowserScanSource(IPage tab, MusicSite site, string? query) : ILibraryScanSource
+    {
+        public async Task ResetAsync() => _ = await BrowserData.ReadAsync<ScrollState>(tab, Script("scroll"), new { reset = true, site = site.Id });
+        public async Task<Track[]> ReadAsync()
         {
-            cancellation.ThrowIfCancellationRequested();
-            var tracks = await BrowserData.ReadAsync<Track[]>(tab, Script("library"), new { site = Site.Id });
-            var fresh = tracks.Where(t => seen.Add(t.Id)).ToArray();
-            if (fresh.Length > 0) { found(fresh); unchanged = 0; }
-            var scroll = await BrowserData.ReadAsync<ScrollState>(tab, Script("scroll"), new { reset = false, site = Site.Id });
-            unchanged = fresh.Length == 0 && scroll.Bottom ? unchanged + 1 : 0;
-            if (unchanged >= 10)
-            {
-                if (Site.Id == "suno" && await ChangeSunoPageAsync(tab, "next", cancellation))
-                {
-                    unchanged = 0;
-                    await BrowserData.ReadAsync<ScrollState>(tab, Script("scroll"), new { reset = true, site = Site.Id });
-                    continue;
-                }
-                return $"Loaded {seen.Count} tracks from {Site.Name}. Reached the end of this view. Filters, folders and the selected workspace affect this list.";
-            }
-            await Task.Delay(800, cancellation);
+            if (!site.IsLibraryUrl(tab.Url)) throw new IOException("The browser left the library. Open library / filters and start a fresh scan.");
+            var tracks = await BrowserData.ReadAsync<Track[]>(tab, Script("library"), new { site = site.Id });
+            // Ignore stale non-matching rows while the site's debounced search refreshes.
+            return site.Id == "suno" && query != null
+                ? tracks.Where(t => t.Title.Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray() : tracks;
         }
-        return $"Loaded {seen.Count} tracks. Scan reached its 10-minute limit; the list may be incomplete. Scan a smaller filtered library view to continue.";
+        public Task<ScrollState> ScrollAsync() => BrowserData.ReadAsync<ScrollState>(tab, Script("scroll"), new { reset = false, site = site.Id });
+        public Task<bool> ChangePageAsync(string direction, CancellationToken token) => site.Id == "suno" ? ChangeSunoPageAsync(tab, direction, token) : Task.FromResult(false);
     }
 
     private static async Task<bool> ChangeSunoPageAsync(IPage tab, string direction, CancellationToken cancellation)

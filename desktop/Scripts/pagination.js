@@ -1,8 +1,12 @@
 async ({ direction }) => {
   const name = direction === 'previous' ? 'Previous page' : 'Next page';
-  const button = [...document.querySelectorAll('button[aria-label]')].find(b => b.getAttribute('aria-label') === name && b.getClientRects().length);
+  const pageInput = document.querySelector('input[aria-label="Current page number"], input[placeholder="#"]');
+  // The /me library has unlabelled arrow buttons immediately beside its page input.
+  const sibling = direction === 'previous' ? pageInput?.previousElementSibling : pageInput?.nextElementSibling;
+  const button = [...document.querySelectorAll('button[aria-label]')].find(b => b.getAttribute('aria-label') === name && b.getClientRects().length)
+    || (sibling?.tagName === 'BUTTON' && sibling.getClientRects().length ? sibling : null);
   if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') return { Changed: false, Error: '' };
-  const page = () => document.querySelector('input[aria-label="Current page number"]')?.value || '';
+  const page = () => document.querySelector('input[aria-label="Current page number"], input[placeholder="#"]')?.value || '';
   const fingerprint = () => [...document.querySelectorAll('[data-testid="clip-row"] a[href*="/song/"], [role="group"] a[href*="/song/"]')].slice(0, 6).map(a => a.getAttribute('href')).join('|');
   const oldPage = page();
   const oldFingerprint = fingerprint();

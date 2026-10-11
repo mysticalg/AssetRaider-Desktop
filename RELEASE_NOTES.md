@@ -1,22 +1,13 @@
-# AssetRaider Desktop 0.3.1 — record again
+# AssetRaider Desktop 0.3.2 — library search and scan controls
 
-Choose Udio or Suno tracks and record normal playback into separate local WAV files.
+- Suno opens the user's library at `https://suno.com/me`. **Open library / filters** lets you choose site filters before scanning.
+- Type a track name to filter scanned results immediately. **Find in library** searches Suno directly and scans matching results; Udio scans the current view and applies the name filter locally.
+- **Pause scan / Resume scan** retains your position. **Clear scanned list** safely stops scanning and clears results without deleting recordings.
+- Fresh scans replace stale results. Select all and recording apply to visible matches only.
+- Updated pagination for Suno's current library arrows. Existing repeat-recording and WAV preservation remain available.
 
-- **Record again (new copy)** records every selected track even when a previous recording is remembered. Existing WAVs and partial recordings are preserved.
-- Skipped tracks now show the existing file's full path, including when the song has since been renamed.
-- Queue summaries separate newly recorded tracks from skipped existing files.
-- Regression checks cover repeat playback attempts, renamed songs, preserving older copies after failure, numbered filenames, cancellation, and retrying missing/damaged files on both services.
+Windows 11 x64 and Google Chrome required. The runtime is bundled; builds remain unsigned. Close the old app before installing the update.
 
-- Windows installer with Start menu shortcut and Installed apps entry, plus a portable ZIP.
-- Track selection and Select all for the loaded library/workspace.
-- Stereo 48 kHz / 16-bit WAV recordings, completion tracking and resumable queues.
-- Fixes the Udio `Return type mismatch ... ScrollState` library-loading error.
-- Adds Suno workspace scanning and playback support.
+Validation: name search and current pagination inspected in a signed-in Suno library; 13 browser-script tests; shared scan tests for pause/resume, page deduplication, cancellation and late-result rejection; Windows interface search/layout checks; app and installer checks. Full signed-in recording queues remain outside this update's validation.
 
-**Requirements:** Windows 11 x64, installed Google Chrome, and access to playable tracks on the chosen service. The .NET runtime is bundled. Both downloads are unsigned.
-
-**Install:** run the Setup EXE; or extract the full portable ZIP and run AssetRaider.exe. Choose a site, sign in using the normal Chrome button, close the sign-in window, then load the library and record selected tracks.
-
-**Validation:** automated player/library tests, app launch/data checks, and installer payload extraction/removal pass. Native Windows process audio capture has been exercised locally. Complete signed-in recording queues on both services remain unverified; this is a beta release. Playback recording takes real time and does not recover or improve the original master.
-
-SHA256SUMS.txt lists hashes for both downloads. Report issues with the app version, chosen site and error message. Never attach credentials or browser profiles.
+SHA256SUMS.txt covers the installer and portable ZIP.

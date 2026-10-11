@@ -17,7 +17,8 @@ public static class SelfTest
             if (!recording.Contains("--remote-debugging-address=127.0.0.1") || !recording.Contains("--remote-debugging-port=0")) throw new Exception("Recording mode is not confined to loopback.");
             if (login[0] != recording[0]) throw new Exception("Login and recording profiles differ.");
             var suno = MusicBrowser.LaunchOptions("chrome.exe", @"C:\Suno Profile", false, MusicSite.Suno).ArgumentList;
-            if (suno.Last() != "https://suno.com/create" || suno.Any(a => a.Contains("debugging"))) throw new Exception("Suno sign-in is misconfigured.");
+            if (suno.Last() != "https://suno.com/me" || suno.Any(a => a.Contains("debugging"))) throw new Exception("Suno sign-in is misconfigured.");
+            LibraryScanCheck.RunAsync().GetAwaiter().GetResult();
             var scroll = BrowserData.Decode<ScrollState>("{\"Bottom\":true,\"Position\":420}");
             var songs = BrowserData.Decode<Track[]>("[{\"Site\":\"suno\",\"Id\":\"11111111-1111-4111-8111-111111111111\",\"Title\":\"Song\",\"Duration\":\"3:18\"}]");
             var player = BrowserData.Decode<PlayerState>("{\"Duration\":198,\"Elapsed\":2.5,\"Done\":false,\"Error\":\"\"}");
@@ -25,7 +26,7 @@ public static class SelfTest
             if (!songs[0].Url.StartsWith("https://suno.com/song/") || MusicSite.Suno.OwnsUrl("https://suno.com.evil.test/create")) throw new Exception("Site isolation failed.");
             CheckResume(Path.Combine(directory, "resume-" + Guid.NewGuid().ToString("N")));
             RecordingPolicyCheck.RunAsync(Path.Combine(directory, "repeat-" + Guid.NewGuid().ToString("N"))).GetAwaiter().GetResult();
-            File.WriteAllText(Path.Combine(directory, "launch-check.json"), JsonSerializer.Serialize(new { Passed = true, LoginArguments = login, RecordingArguments = recording, SunoArguments = suno, StructuredResults = "Scroll, track list and playback state decoded successfully", Resume = "Legacy Udio completion list migrated; identical song IDs remain separate across sites", RepeatRecording = "Both sites: resume path, renamed tracks, explicit repeat, failed retry preservation, numbered copies, missing/damaged files, cancellation" }, new JsonSerializerOptions { WriteIndented = true }));
+            File.WriteAllText(Path.Combine(directory, "launch-check.json"), JsonSerializer.Serialize(new { Passed = true, LoginArguments = login, RecordingArguments = recording, SunoArguments = suno, StructuredResults = "Scroll, track list and playback state decoded successfully", Resume = "Legacy Udio completion list migrated; identical song IDs remain separate across sites", LibraryScan = "Suno /me routes, name search, pause/resume, pagination deduplication and cancellation passed", RepeatRecording = "Both sites: resume path, renamed tracks, explicit repeat, failed retry preservation, numbered copies, missing/damaged files, cancellation" }, new JsonSerializerOptions { WriteIndented = true }));
             return 0;
         }
         catch (Exception ex) { File.WriteAllText(Path.Combine(directory, "launch-check.json"), ex.ToString()); return 1; }
@@ -54,7 +55,7 @@ public static class SelfTest
         var results = new List<string>();
         try
         {
-            var track = new Track { Id = "ExampleUdioTrack000001", Title = "CON: bad/name? 🎵" };
+            var track = new Track { Id = "ExampleUdioTrack000001", Title = "CON: bad/name? ðŸŽµ" };
             var library = new RecordingLibrary(directory); library.Load();
             var paths = library.Allocate(track);
             if (!paths.Final.StartsWith(Path.GetFullPath(directory)) || Path.GetFileName(paths.Final).Contains('?')) throw new Exception("Unsafe filename.");

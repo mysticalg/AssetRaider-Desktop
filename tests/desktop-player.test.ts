@@ -137,4 +137,18 @@ describe("Suno workspace pagination", () => {
     document.querySelector("button")!.disabled = true;
     expect(await change()).toEqual({ Changed: false, Error: "" });
   });
+  it("uses the unlabelled /me pagination arrows without clicking unrelated buttons", async () => {
+    document.body.innerHTML = `<button id="unrelated"></button><div><button id="previous" disabled></button><input placeholder="#" value="1"><button id="next"></button></div>
+      <div role="group" data-clip-status="complete"><a href="/song/11111111-1111-4111-8111-111111111111">Example</a></div>`;
+    for (const button of document.querySelectorAll("button")) vi.spyOn(button, "getClientRects").mockReturnValue({ length: 1 } as DOMRectList);
+    const unrelated = vi.fn(); document.querySelector<HTMLButtonElement>("#unrelated")!.onclick = unrelated;
+    document.querySelector<HTMLButtonElement>("#next")!.onclick = () => {
+      document.querySelector("input")!.value = "2";
+      document.querySelector("a")!.setAttribute("href", "/song/22222222-2222-4222-8222-222222222222");
+    };
+    expect(await change("previous")).toEqual({ Changed: false, Error: "" });
+    const pending = change(); await vi.advanceTimersByTimeAsync(250);
+    expect(await pending).toEqual({ Changed: true, Error: "" });
+    expect(unrelated).not.toHaveBeenCalled();
+  });
 });

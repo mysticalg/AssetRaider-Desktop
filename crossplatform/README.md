@@ -1,4 +1,14 @@
-# AssetRaider 0.4.1 beta — macOS and Linux
+# AssetRaider 0.4.2 beta — macOS and Linux
+
+## Library scanning and track-name search
+
+- **Open library / filters** opens the dedicated Chrome library window. Suno opens `https://suno.com/me`; an already-open `/me` or `/create` view keeps its filters and selected workspace. Choose the Songs tab and any site filters before scanning.
+- **Scan library** starts a fresh scan of that view and replaces the previous scanned list, including when the new view has no results.
+- **Track name** filters scanned titles as you type, ignoring case. Matches update as new tracks arrive. Clear the text to see all scanned tracks. **Select all** and recording apply only to the currently visible matches; hidden selections are not recorded.
+- **Find in library** (or Enter) starts a fresh scan. On Suno it applies the entered text to the site's library search, so older matches can be found directly without first scanning every song. Other Suno filters still apply. For Udio it scans the current view and filters the results locally. Empty text clears Suno's search when you press Find in library.
+- **Pause scan / Resume scan** keeps the same scan, deduplication list and browser position while the app remains open. Pausing takes effect after the current browser step, and paused time does not use the scan's ten-minute active-time limit.
+- **Clear scanned list** stops any scan, waits for its current step, then clears the app's results. It never deletes WAVs or completion history. **Stop** ends the scan but keeps tracks found. To change the site's filters mid-scan, Stop or Clear first, change them in Chrome, then start a fresh scan.
+
 
 **Record again (new copy)** makes fresh recordings of selected tracks even if earlier WAVs are remembered. Existing files stay intact. Normal recording skips verified completed files and shows their full paths; the summary counts new recordings and skipped files separately. Songs are recognised by site and ID, even after renaming.
 
@@ -16,7 +26,7 @@ Choose Udio or Suno, sign in using normal Chrome, close the sign-in window, load
 
 - **x86-64**, Ubuntu 22.04/24.04 or a comparable glibc desktop with X11/XWayland, ICU, libX11, libICE, libSM, fontconfig, libGL, and Google Chrome's native `.deb`/`.rpm` package. Snap/Flatpak Chrome profiles are not supported.
 - Requires a running **PulseAudio or PipeWire-Pulse** sound server, plus `pactl` and `parec`. On Debian/Ubuntu install `pulseaudio-utils`; on Fedora install `pulseaudio-utils`. The app does not replace or reconfigure your default sound server.
-- Extract `AssetRaider-0.4.1-linux-x64.tar.gz`. Run `AssetRaider/AssetRaider`, or run `bash AssetRaider/install.sh` for a per-user installation and applications-menu entry. No .NET installation or root access is required by AssetRaider itself.
+- Extract `AssetRaider-0.4.2-linux-x64.tar.gz`. Run `AssetRaider/AssetRaider`, or run `bash AssetRaider/install.sh` for a per-user installation and applications-menu entry. No .NET installation or root access is required by AssetRaider itself.
 - Recording mode creates a dedicated virtual sink and routes only its Chrome process to it. **That browser's playback is intentionally silent on Linux** while it records. Your microphone and normal desktop output are not captured.
 - Use `~/.local/share/AssetRaiderApp/uninstall.sh` to remove an installed copy. Recordings and browser sign-ins are preserved. A portable copy can be removed by deleting its extracted app folder.
 
