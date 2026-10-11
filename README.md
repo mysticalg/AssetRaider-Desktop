@@ -2,9 +2,9 @@
 
 **Udio + Suno playback to WAV, on Windows, macOS and Linux.** Choose tracks, select all, and record a queue into separate local audio files.
 
-[Download website](https://mysticalg.github.io/AssetRaider-Desktop/) · [Mac/Linux downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.4.4-beta.1) · [Windows downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.4-beta.1) · [Report a problem](https://github.com/mysticalg/AssetRaider-Desktop/issues)
+[Download website](https://mysticalg.github.io/AssetRaider-Desktop/) · [Mac/Linux downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.4.6-beta.1) · [Windows downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.5-beta.1) · [Report a problem](https://github.com/mysticalg/AssetRaider-Desktop/issues)
 
-## macOS and Linux — 0.4.4 beta
+## macOS and Linux — 0.4.6 beta
 
 - **Mac:** macOS 14+, Apple Silicon or Intel, Google Chrome. Extract the matching ZIP and move AssetRaider.app to Applications. Recording uses ScreenCaptureKit with the standard Screen & System Audio Recording permission. Builds are ad-hoc signed but **not Apple notarized**; Gatekeeper may block opening downloaded apps.
 - **Linux:** x86-64 Ubuntu 22.04+ or a comparable X11/XWayland desktop, native Google Chrome, PulseAudio/PipeWire-Pulse and `pulseaudio-utils`. Extract and launch `AssetRaider/AssetRaider`, or run `bash AssetRaider/install.sh`. Recording uses a dedicated silent sink, separate from normal desktop audio.
@@ -12,12 +12,12 @@
 
 See the [Mac/Linux installation and build guide](crossplatform/README.md). Keep the computer awake while recording. No separate .NET runtime is required.
 
-## Windows — 0.3.4 beta
+## Windows — 0.3.5 beta
 
 Requires **Windows 11 x64 and Google Chrome**. The .NET runtime is included.
 
-- **Installer:** download `AssetRaider-0.3.4-Setup.exe` from Releases, run it, then open AssetRaider from the Start menu. Installs for your Windows account without administrator access.
-- **Portable:** download `AssetRaider-0.3.4-Windows-x64.zip`, extract the entire ZIP and run `AssetRaider.exe`. Keep all extracted files together, including `.playwright`.
+- **Installer:** download `AssetRaider-0.3.5-Setup.exe` from Releases, run it, then open AssetRaider from the Start menu. Installs for your Windows account without administrator access.
+- **Portable:** download `AssetRaider-0.3.5-Windows-x64.zip`, extract the entire ZIP and run `AssetRaider.exe`. Keep all extracted files together, including `.playwright`.
 
 This is an **unsigned public beta**. Windows may display an unknown-publisher warning. Review the source or build it yourself if you prefer. SHA-256 checksums accompany each release.
 
@@ -33,7 +33,7 @@ These WAVs contain playback audio. They are not original studio masters or nativ
 
 ## Beta status
 
-Version 0.3.4 adds a new generated waveform icon, a clearer library/recording layout and more room for tracks. It includes the fix for Suno animated covers being mistaken for a different song player and improves stop/retry cleanup. It includes Suno library search, name filtering, Pause/Resume scan and Clear scanned list. It keeps **Record again (new copy)**, displays existing saved paths, and separates skipped files from new recordings. It includes Suno support and fixes the Udio `Return type mismatch ... ScrollState` error by explicitly converting structured browser results. Automated player/library tests, app launch/data checks and installer extraction/removal checks pass. The native Windows audio capture self-test has also been exercised locally. **Suno recording on Windows was confirmed working by a user on 11 October 2026.** A complete signed-in recording queue on both services has not yet been verified. Site changes, login restrictions or playback conditions may require fixes.
+Version 0.3.5 adds per-track source codec, approximate stream bitrate, sample rate and channel detection. It keeps the waveform icon and refreshed layout. It includes the fix for Suno animated covers being mistaken for a different song player and improves stop/retry cleanup. It includes Suno library search, name filtering, Pause/Resume scan and Clear scanned list. It keeps **Record again (new copy)**, displays existing saved paths, and separates skipped files from new recordings. It includes Suno support and fixes the Udio `Return type mismatch ... ScrollState` error by explicitly converting structured browser results. Automated player/library tests, app launch/data checks and installer extraction/removal checks pass. The native Windows audio capture self-test has also been exercised locally. **Suno recording on Windows was confirmed working by a user on 11 October 2026.** A complete signed-in recording queue on both services has not yet been verified. Site changes, login restrictions or playback conditions may require fixes.
 
 Please include your app version, Windows version, chosen site and the error text in issue reports. Do not upload passwords, cookies, browser profile folders or private recordings.
 
@@ -53,7 +53,7 @@ Use Windows, the .NET 10 SDK, and Node.js 24 for JavaScript tests:
 npm ci
 npm test
 ./scripts/build-release.ps1
-$check = Start-Process ./output/releases/AssetRaider-0.3.4-Setup.exe -ArgumentList '--verify-install', 'C:\Temp\assetraider-installer.json' -Wait -PassThru
+$check = Start-Process ./output/releases/AssetRaider-0.3.5-Setup.exe -ArgumentList '--verify-install', 'C:\Temp\assetraider-installer.json' -Wait -PassThru
 Get-Content C:\Temp\assetraider-installer.json
 ```
 
@@ -62,3 +62,9 @@ Release artifacts and SHA-256 checksums are written to `output/releases`. No sig
 ## License
 
 MIT — see [LICENSE](LICENSE). Third-party notices are in [desktop/licenses](desktop/licenses) and the packaged `.playwright` directory.
+
+## Source quality
+
+During recording, the source-quality readout shows the codec, approximate stream bitrate, sample rate and channels reported by Chrome for the selected audio player. For example: `MP3 · ~97.9 kbps · 44.1 kHz · stereo`. The `~` bitrate may include headers/container overhead and is not an exact encoder setting. Video or multiple-audio-track resources do not receive an audio bitrate estimate. Unknown values are not inferred from the 48 kHz / 16-bit WAV output.
+
+Measurements are saved in the existing completed-track history. Older recordings without source metadata show unknown when skipped. Library scanning does not play every track to probe its quality. Stream URLs are not saved. Validation includes isolated Chrome playback of a generated 96 kbps / 44.1 kHz MP3, source-player matching, metadata changes and history preservation.
