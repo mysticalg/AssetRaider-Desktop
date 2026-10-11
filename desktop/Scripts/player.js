@@ -59,7 +59,7 @@ async ({ site = 'udio', id } = {}) => {
       if (src && (player.currentSrc || player.src) !== src && !done) error = 'The song changed during recording.';
       if (started && !done && Date.now() - lastAdvance > 30000) error = 'Playback stalled or paused for 30 seconds.';
       if (started && Math.abs(player.playbackRate - 1) > .001) error = 'Playback speed changed during recording.';
-      return { Duration: duration, Elapsed: current, Done: done, Error: error, Source: player.currentSrc || player.src || '' };
+      return { Duration: duration, Elapsed: current, Done: done, Error: error, Source: src };
     }
   };
   try {

@@ -48,6 +48,7 @@ describe("desktop Udio playback controller", () => {
     await prepare(); await api().start();
     Object.defineProperty(audio, "currentSrc", { value: "blob:other" });
     expect(api().state().Error).toContain("changed");
+    expect(api().state().Source).toBe("blob:song");
   });
   it("reports paused or stalled playback and restores hooks on failure", async () => {
     await prepare(); await api().start();
