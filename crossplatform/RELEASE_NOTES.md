@@ -1,6 +1,6 @@
-# AssetRaider 0.4.5 — macOS and Linux beta
+# AssetRaider 0.4.6 — macOS and Linux beta
 
-**New in 0.4.5:** per-track source quality: codec, approximate browser-reported stream bitrate, sample rate and channels. Values update during recording and are saved in the completed-track history. Missing/ambiguous metadata stays unknown; video or multiple-audio-track resources do not receive an audio bitrate estimate. The generated app icon and refreshed layout remain included.
+**New in 0.4.6:** optional media-diagnostics cleanup runs outside the recording stop path, so a slow connection cannot append silence to a completed capture. Includes per-track source quality: codec, approximate browser-reported stream bitrate, sample rate and channels. Values update during recording and are saved in the completed-track history. Missing/ambiguous metadata stays unknown; video or multiple-audio-track resources do not receive an audio bitrate estimate. The generated app icon and refreshed layout remain included.
 
 Bitrate may include headers/container overhead and is labelled `~`. This is the playback source quality, separate from the unchanged 48 kHz / 16-bit WAV output. Detection begins with recording; the library scan does not play every track. Older saved tracks without source metadata show unknown. No stream URLs are stored.
 
@@ -14,9 +14,9 @@ AssetRaider now has desktop builds for **Apple Silicon Macs, Intel Macs, and Lin
 
 | Download | Requirements |
 | --- | --- |
-| `AssetRaider-0.4.5-osx-arm64.zip` | Apple Silicon, macOS 14+, Google Chrome |
-| `AssetRaider-0.4.5-osx-x64.zip` | Intel Mac, macOS 14+, Google Chrome |
-| `AssetRaider-0.4.5-linux-x64.tar.gz` | Ubuntu 22.04+ or comparable x86-64 desktop, native Google Chrome, PulseAudio/PipeWire-Pulse and pulseaudio-utils |
+| `AssetRaider-0.4.6-osx-arm64.zip` | Apple Silicon, macOS 14+, Google Chrome |
+| `AssetRaider-0.4.6-osx-x64.zip` | Intel Mac, macOS 14+, Google Chrome |
+| `AssetRaider-0.4.6-linux-x64.tar.gz` | Ubuntu 22.04+ or comparable x86-64 desktop, native Google Chrome, PulseAudio/PipeWire-Pulse and pulseaudio-utils |
 
 **Mac:** extract the ZIP, move AssetRaider.app to Applications. Grant Screen & System Audio Recording permission when requested. The helper requests audio only from the dedicated Chrome application, not microphone audio or saved screen video. These beta builds are ad-hoc signed, **not Apple Developer ID signed or notarized**; macOS may block opening downloaded apps.
 

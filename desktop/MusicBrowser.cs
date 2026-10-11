@@ -183,12 +183,14 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
     public async Task StopAsync()
     {
         try { if (page is { IsClosed: false }) await page.EvaluateAsync("() => window.__assetRaiderDesktop?.stop()").WaitAsync(TimeSpan.FromSeconds(5)); } catch { }
-        if (qualityMonitor != null) await qualityMonitor.DisposeAsync();
-        qualityMonitor = null; preparedSource = "";
     }
     public async ValueTask DisposeAsync()
     {
         await StopAsync();
+        // RecorderQueue stops capture immediately after StopAsync. Optional diagnostics
+        // cleanup must never delay that boundary and append silence to the WAV.
+        if (qualityMonitor != null) await qualityMonitor.DisposeAsync();
+        qualityMonitor = null; preparedSource = "";
         // Browser.close closes only the dedicated browser launched with this app's private profile.
         try
         {
