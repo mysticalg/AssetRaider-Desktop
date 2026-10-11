@@ -1,6 +1,10 @@
-# AssetRaider desktop — Udio + Suno player and WAV recorder (0.3.8)
+# AssetRaider desktop — Udio + Suno player and WAV recorder (0.3.9)
 
 ## Music player
+
+Choose **List** or **Grid** and **Small**, **Medium** or **Large** artwork. Covers keep their original proportions, including portrait artwork. List view has a horizontal scrollbar for the additional **Created**, **Released**, **Suno version** and **Full prompt** columns. Dates use local time. Release timestamps stay unavailable when the provider does not supply one; a public song is not assigned its creation date as its release date.
+
+Double-click a prompt cell or choose **Full prompt / copy** for the highlighted track. The viewer preserves complete style text, lyrics/generation prompts and excluded styles when Suno supplies them; **Copy full prompt** copies everything. Grid cards offer the same viewer. Click a card's song title to toggle its recording selection. Metadata is read from the library's existing responses and visible rows.
 
 The selection-column header toggles selection for all visible tracks; a partial selection selects the rest, and clicking again clears selection. **Song**, **Length** and **Status** headers alternate ascending/descending order. Length is sorted by duration; unknown lengths stay last. Sorting keeps selections and follows the name filter. Artwork loads as rows become visible, with a music-note placeholder for missing images.
 
@@ -52,7 +56,7 @@ With the .NET 10 SDK installed:
 
 ```powershell
 ./scripts/build-desktop.ps1
-$check = Start-Process ./output/desktop-0.3.8/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
+$check = Start-Process ./output/desktop-0.3.9/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
 Get-Content C:\Temp\AssetRaiderTest\self-test.json
 ```
 

@@ -6,11 +6,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AssemblyName>AssetRaider.Setup</AssemblyName>
-    <Version>0.3.8</Version>
+    <Version>0.3.9</Version>
     <ApplicationIcon>../brand/app-icon.ico</ApplicationIcon>
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
-  <ItemGroup><EmbeddedResource Include="../output/releases/AssetRaider-0.3.8-Windows-x64.zip" LogicalName="payload.zip" /></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="../output/releases/AssetRaider-0.3.9-Windows-x64.zip" LogicalName="payload.zip" /></ItemGroup>
 </Project>

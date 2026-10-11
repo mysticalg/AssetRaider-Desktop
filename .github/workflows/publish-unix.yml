@@ -38,9 +38,9 @@ jobs:
           SOURCE_SHA: ${{ steps.source.outputs.sha }}
         shell: bash
         run: |
-          test -s downloads/AssetRaider-0.4.8-osx-arm64.zip
-          test -s downloads/AssetRaider-0.4.8-osx-x64.zip
-          test -s downloads/AssetRaider-0.4.8-linux-x64.tar.gz
+          test -s downloads/AssetRaider-0.4.9-osx-arm64.zip
+          test -s downloads/AssetRaider-0.4.9-osx-x64.zip
+          test -s downloads/AssetRaider-0.4.9-linux-x64.tar.gz
           (cd downloads && sha256sum AssetRaider-* > SHA256SUMS.txt)
-          gh release create v0.4.8-beta.1 downloads/* --draft --prerelease --target "$SOURCE_SHA" --title 'AssetRaider 0.4.8 — macOS and Linux beta' --notes-file crossplatform/RELEASE_NOTES.md
-          gh release edit v0.4.8-beta.1 --draft=false
+          gh release create v0.4.9-beta.1 downloads/* --draft --prerelease --target "$SOURCE_SHA" --title 'AssetRaider 0.4.9 — macOS and Linux beta' --notes-file crossplatform/RELEASE_NOTES.md
+          gh release edit v0.4.9-beta.1 --draft=false

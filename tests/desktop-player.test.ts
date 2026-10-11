@@ -210,7 +210,7 @@ describe("desktop library scanning", () => {
       <a href="https://suno.com/song/22222222-2222-4222-8222-222222222222">Not ready</a>
     </div><a aria-label="Playbar: Title" href="https://suno.com/song/33333333-3333-4333-8333-333333333333">Not in library</a>`;
     const tracks = (0, eval)(`(${source("library")})`)({ site: "suno" });
-    expect(tracks).toEqual([{ Id: "11111111-1111-4111-8111-111111111111", Title: "Same title", Duration: "3:18", Site: "suno", ArtworkUrl: "https://cdn.example.test/cover.webp" }]);
+    expect(tracks).toEqual([{ Id: "11111111-1111-4111-8111-111111111111", Title: "Same title", Duration: "3:18", Site: "suno", ArtworkUrl: "https://cdn.example.test/cover.webp", SunoVersion: "", Prompt: "" }]);
   });
   it("reads lazy artwork before the library loads the image", () => {
     document.body.innerHTML = `<div role="group" data-clip-status="complete">

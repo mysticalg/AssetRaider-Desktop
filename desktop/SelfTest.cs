@@ -22,6 +22,7 @@ public static class SelfTest
             SourceQualityCheck.Run();
             AudioSpectrum.Check();
             PlaybackPlaylist.Check();
+            TrackMetadata.Check();
             var scroll = BrowserData.Decode<ScrollState>("{\"Bottom\":true,\"Position\":420}");
             var songs = BrowserData.Decode<Track[]>("[{\"Site\":\"suno\",\"Id\":\"11111111-1111-4111-8111-111111111111\",\"Title\":\"Song\",\"Duration\":\"3:18\"}]");
             var player = BrowserData.Decode<PlayerState>("{\"Duration\":198,\"Elapsed\":2.5,\"Done\":false,\"Error\":\"\"}");

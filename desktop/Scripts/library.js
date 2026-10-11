@@ -15,7 +15,9 @@
     const duration = (durationRoot?.innerText || durationRoot?.textContent || '').match(/\b\d{1,2}:\d{2}\b/)?.[0] || '';
     const image = row?.querySelector('img');
     const artwork = image?.getAttribute('data-src') || image?.currentSrc || image?.src || '';
-    tracks.set(id, { Id: id, Title: title, Duration: duration, Site: site, ArtworkUrl: artwork.startsWith('https://') ? artwork : '' });
+    const badge = site === 'suno' ? row?.querySelector('[class*="font-mono"][class*="uppercase"]')?.textContent?.trim() || '' : '';
+    const description = site === 'suno' ? a.closest('[class*="clip-title-wrapper"]')?.parentElement?.parentElement?.nextElementSibling?.textContent || '' : '';
+    tracks.set(id, { Id: id, Title: title, Duration: duration, Site: site, ArtworkUrl: artwork.startsWith('https://') ? artwork : '', SunoVersion: badge, Prompt: description ? 'Style prompt:\n' + description : '' });
   }
   return [...tracks.values()];
 }

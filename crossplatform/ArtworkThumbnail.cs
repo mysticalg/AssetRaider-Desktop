@@ -9,9 +9,9 @@ internal sealed class ArtworkThumbnail : Border
     private readonly string url;
     private Bitmap? bitmap;
     private int generation;
-    public ArtworkThumbnail(string artworkUrl)
+    public ArtworkThumbnail(string artworkUrl, int size=72)
     {
-        url = artworkUrl; Width = Height = 42; CornerRadius = new CornerRadius(4); Background = Brush.Parse("#263226");
+        url = artworkUrl; Width = Height = size; CornerRadius = new CornerRadius(4); Background = Brush.Parse("#263226");
         Placeholder();
         AttachedToVisualTree += async (_, _) => {
             var current = ++generation;
@@ -19,8 +19,8 @@ internal sealed class ArtworkThumbnail : Border
                 var bytes = await ArtworkDownload.ReadAsync(url);
                 if (bytes == null || generation != current) return;
                 using var stream = new MemoryStream(bytes);
-                bitmap = Bitmap.DecodeToWidth(stream, 48);
-                Child = new Image { Source = bitmap, Stretch = Stretch.UniformToFill };
+                bitmap = Bitmap.DecodeToWidth(stream, 256);
+                Child = new Image { Source = bitmap, Stretch = Stretch.Uniform };
             } catch { Placeholder(); }
         };
         DetachedFromVisualTree += (_, _) => { generation++; Child = null; bitmap?.Dispose(); bitmap = null; Placeholder(); };

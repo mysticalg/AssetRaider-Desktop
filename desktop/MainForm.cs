@@ -18,6 +18,11 @@ public sealed class MainForm : Form
     private TrackSort sort;
     private bool sortDescending;
     private readonly ArtworkCache artwork;
+    private readonly TrackGridView cards;
+    private readonly ComboBox viewPicker=new() {DropDownStyle=ComboBoxStyle.DropDownList,Width=85};
+    private readonly ComboBox artworkSize=new() {DropDownStyle=ComboBoxStyle.DropDownList,Width=110};
+    private Track? focusedTrack;
+    private int thumbnailSize=72;
     private readonly TrackBar playbackSeek = new() { Minimum = 0, Maximum = 1000, TickStyle = TickStyle.None, Dock = DockStyle.Fill, Enabled = false };
     private readonly System.Windows.Forms.Timer playerTimer = new() { Interval = 250 };
     private bool playerBusy, pollingPlayer, seekingPlayer;
@@ -46,11 +51,14 @@ public sealed class MainForm : Form
     public MainForm()
     {
         player = new(browser);
-        artwork = new(() => { if (!IsDisposed) grid.Invalidate(); });
+        artwork = new(() => { if (!IsDisposed) {grid.Invalidate(); cards?.Invalidate();} });
+        cards = new(url=>artwork.Get(url)) {Dock=DockStyle.Fill,Visible=false};
+        cards.Play=track=>_ = PlayTrackAsync(track); cards.Prompt=ShowPrompt; cards.FocusTrack=track=>focusedTrack=track;
+        cards.SelectionChanged=()=>{UpdateCount();grid.Invalidate();}; cards.CanChangeSelection=CanChangeList;
         Disposed += (_, _) => artwork.Dispose();
         player.Changed += RefreshPlayer;
-        Text = "AssetRaider 0.3.8 — Udio + Suno WAV Recorder";
-        MinimumSize = new Size(960, 880); Size = new Size(1160, 980);
+        Text = "AssetRaider 0.3.9 — Udio + Suno WAV Recorder";
+        MinimumSize = new Size(960, 880); Size = new Size(1280, 1080);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10);
         BackColor = Color.FromArgb(242, 245, 239); ForeColor = Color.FromArgb(31, 40, 32);
@@ -67,7 +75,7 @@ public sealed class MainForm : Form
         layout.RowStyles.Add(new(SizeType.Absolute, 52));
         layout.RowStyles.Add(new(SizeType.Absolute, 48));
         layout.RowStyles.Add(new(SizeType.Absolute, 10));
-        layout.RowStyles.Add(new(SizeType.Absolute, 80));
+        layout.RowStyles.Add(new(SizeType.Absolute, 50));
         Controls.Add(layout);
         var header = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Padding = new Padding(12, 8, 12, 8), BackColor = Color.FromArgb(24, 31, 25), Margin = new Padding(0, 0, 0, 12) };
         header.ColumnStyles.Add(new(SizeType.Absolute, 68)); header.ColumnStyles.Add(new(SizeType.Percent, 100));
@@ -135,13 +143,18 @@ public sealed class MainForm : Form
         grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(249, 251, 246);
         grid.Columns.Add(new DataGridViewCheckBoxColumn { DataPropertyName = nameof(Track.Selected), HeaderText = "✓", Width = 44 });
         grid.Columns.Add(new DataGridViewButtonColumn { DataPropertyName = nameof(Track.PlaybackAction), Name = "Playback", HeaderText = "Player", Width = 112, ReadOnly = true });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Title), HeaderText = "Song", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 45, ReadOnly = true });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Title), HeaderText = "Song", Width=270, ReadOnly = true });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Duration), HeaderText = "Length", Width = 90, ReadOnly = true });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.SourceQualityText), HeaderText = "Source quality", Width = 255, ReadOnly = true,
             DefaultCellStyle = new DataGridViewCellStyle { WrapMode = DataGridViewTriState.True, Font = new Font("Segoe UI", 9) },
             ToolTipText = "Encoding reported by Chrome for this song. ~kbps is an approximate stream average. Unknown means unavailable; WAV output settings are separate." });
-        grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Status), HeaderText = "Status", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 55, ReadOnly = true });
+        grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Status), HeaderText = "Status", Width=140, ReadOnly = true });
         grid.Columns.Insert(2, new DataGridViewTextBoxColumn { Name = "Artwork", HeaderText = "", Width = 56, ReadOnly = true, SortMode = DataGridViewColumnSortMode.NotSortable });
+        foreach(var (property,label,width) in new[] {(nameof(Track.CreatedDate),"Created",165),(nameof(Track.ReleaseDate),"Released",165),(nameof(Track.SunoVersion),"Suno version",120),(nameof(Track.Prompt),"Full prompt (double-click)",360)})
+            grid.Columns.Add(new DataGridViewTextBoxColumn {DataPropertyName=property,HeaderText=label,Width=width,ReadOnly=true,SortMode=DataGridViewColumnSortMode.NotSortable});
+        grid.ClipboardCopyMode=DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
+        grid.CellDoubleClick+=(_,e)=>{if(e.RowIndex>=0 && e.ColumnIndex>=0 && grid.Columns[e.ColumnIndex].DataPropertyName==nameof(Track.Prompt) && grid.Rows[e.RowIndex].DataBoundItem is Track track) ShowPrompt(track);};
+        grid.CellToolTipTextNeeded+=(_,e)=>{if(e.RowIndex>=0 && e.ColumnIndex>=0 && grid.Rows[e.RowIndex].DataBoundItem is Track track) e.ToolTipText=grid.Columns[e.ColumnIndex].DataPropertyName switch {nameof(Track.Prompt)=>track.Prompt,nameof(Track.CreatedDate)=>track.CreatedAt,nameof(Track.ReleaseDate)=>track.ReleasedAt.Length>0?track.ReleasedAt:"Release timestamp not provided by the library.",_=>e.ToolTipText};};
         foreach (var property in new[] { nameof(Track.Title), nameof(Track.Duration), nameof(Track.Status) }) grid.Columns.Cast<DataGridViewColumn>().Single(c => c.DataPropertyName == property).SortMode = DataGridViewColumnSortMode.Programmatic;
         grid.ColumnHeaderMouseClick += (_, e) => {
             if (!CanChangeList()) return;
@@ -156,10 +169,9 @@ public sealed class MainForm : Form
         grid.CellPainting += (_, e) => {
             if (e.RowIndex < 0 || e.ColumnIndex != 2 || grid.Rows[e.RowIndex].DataBoundItem is not Track track) return;
             e.PaintBackground(e.ClipBounds, true);
-            var area = new Rectangle(e.CellBounds.X + 7, e.CellBounds.Y + 5, 40, 40);
+            var area = new Rectangle(e.CellBounds.X + 7, e.CellBounds.Y + 5, thumbnailSize, thumbnailSize);
             var image = artwork.Get(track.ArtworkUrl);
-            if (image != null) e.Graphics!.DrawImage(image, area);
-            else { using var brush = new SolidBrush(Color.FromArgb(224,232,217)); e.Graphics!.FillRectangle(brush, area); TextRenderer.DrawText(e.Graphics, "♪", Font, area, Color.FromArgb(108,128,86), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter); }
+            ArtworkPaint.Draw(e.Graphics!,image,area,Font);
             e.Handled = true;
         };
         grid.RowTemplate.MinimumHeight = 50;
@@ -170,10 +182,19 @@ public sealed class MainForm : Form
             if (e.RowIndex >= 0 && e.ColumnIndex == 1 && !playerBusy && grid.Rows[e.RowIndex].DataBoundItem is Track track)
                 _ = PlayTrackAsync(track);
         };
-        layout.Controls.Add(grid, 0, 4);
+        var libraryView=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=2,Margin=Padding.Empty};
+        libraryView.RowStyles.Add(new(SizeType.Absolute,40)); libraryView.RowStyles.Add(new(SizeType.Percent,100));
+        var viewBar=new FlowLayoutPanel {Dock=DockStyle.Fill,WrapContents=false,Margin=Padding.Empty};
+        viewBar.Controls.Add(new Label {Text="View",AutoSize=true,Margin=new Padding(0,7,6,0)}); viewPicker.Items.AddRange(["List","Grid"]); viewPicker.SelectedIndex=0; viewBar.Controls.Add(viewPicker);
+        viewBar.Controls.Add(new Label {Text="Artwork",AutoSize=true,Margin=new Padding(12,7,6,0)}); artworkSize.Items.AddRange(["Small","Medium","Large"]); artworkSize.SelectedIndex=1; viewBar.Controls.Add(artworkSize);
+        var copyPrompt=new Button {Text="Full prompt / copy"}; StyleButton(copyPrompt); copyPrompt.Click+=(_,_)=>{var track=cards.Visible?focusedTrack:grid.CurrentRow?.DataBoundItem as Track;if(track!=null)ShowPrompt(track);else SetStatus("Choose a track first to view and copy its full prompt.");}; viewBar.Controls.Add(copyPrompt);
+        var viewHost=new Panel {Dock=DockStyle.Fill,Margin=Padding.Empty}; viewHost.Controls.Add(grid);viewHost.Controls.Add(cards);
+        libraryView.Controls.Add(viewBar,0,0); libraryView.Controls.Add(viewHost,0,1); layout.Controls.Add(libraryView,0,4);
+        viewPicker.SelectedIndexChanged+=(_,_)=>{cards.Visible=viewPicker.SelectedIndex==1;grid.Visible=!cards.Visible;cards.SetTracks(tracks.ToArray());};
+        artworkSize.SelectedIndexChanged+=(_,_)=>ResizeArtwork(); ResizeArtwork();
         var playerBar = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 3 };
         playerBar.ColumnStyles.Add(new(SizeType.Percent, 100)); playerBar.ColumnStyles.Add(new(SizeType.Absolute, 120));
-        playerBar.RowStyles.Add(new(SizeType.Absolute, 25)); playerBar.RowStyles.Add(new(SizeType.Absolute, 40)); playerBar.RowStyles.Add(new(SizeType.Percent, 100));
+        playerBar.RowStyles.Add(new(SizeType.Absolute, 25)); playerBar.RowStyles.Add(new(SizeType.Absolute, 44)); playerBar.RowStyles.Add(new(SizeType.Percent, 100));
         playerBar.Controls.Add(nowPlaying, 0, 0); playerBar.SetColumnSpan(nowPlaying, 2);
         var transport = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Margin = Padding.Empty };
         foreach (var button in new[] {playbackToggle, playbackStop, playbackNext, repeat}) StyleButton(button);
@@ -218,6 +239,15 @@ public sealed class MainForm : Form
         var button = new Button { Text = text }; StyleButton(button);
         button.Click += (_, _) => action(); idleButtons.Add(button); return button;
     }
+    private void ShowPrompt(Track track) {using var dialog=new PromptDialog(track);dialog.ShowDialog(this);}
+    private void ResizeArtwork()
+    {
+        thumbnailSize=artworkSize.SelectedIndex switch {0=>40,2=>128,_=>72};
+        grid.Columns[2].Width=thumbnailSize+16;grid.RowTemplate.MinimumHeight=thumbnailSize+12;
+        foreach(DataGridViewRow row in grid.Rows) row.MinimumHeight=thumbnailSize+12;
+        grid.AutoResizeRows();
+        cards.ArtworkSize=artworkSize.SelectedIndex switch {0=>96,2=>224,_=>144};cards.SetTracks(tracks.ToArray());grid.Invalidate();
+    }
     private static void StyleButton(Button button)
     {
         button.AutoSize = true; button.Height = 34; button.FlatStyle = FlatStyle.Flat;
@@ -244,6 +274,7 @@ public sealed class MainForm : Form
         tracks.Clear(); foreach (var track in catalog.Matching(search.Text, sort, sortDescending)) tracks.Add(track);
         tracks.RaiseListChangedEvents = true; tracks.ResetBindings(); UpdateCount();
         player.Playlist.Update(tracks); RefreshPlayer();
+        cards.SetTracks(tracks.ToArray());
     }
     private void TogglePause()
     {
@@ -345,6 +376,7 @@ public sealed class MainForm : Form
         playbackTime.Text = $"{TimeSpan.FromSeconds(player.State?.Elapsed ?? 0):m\\:ss} / {TimeSpan.FromSeconds(player.State?.Duration ?? 0):m\\:ss}";
         if (!seekingPlayer) playbackSeek.Value = (int)Math.Clamp((player.State?.Elapsed ?? 0) / Math.Max(1, player.State?.Duration ?? 1) * 1000, 0, 1000);
         grid.InvalidateColumn(1);
+        cards.Invalidate();
     }
     private async Task Scan(CancellationToken token, bool find = false)
     {
@@ -396,10 +428,18 @@ public sealed class MainForm : Form
         SortTracks(TrackSort.Length); if (tracks[0].Title != "Night Drive" || !tracks[0].Selected) throw new Exception("Reverse sort lost selection.");
         SortTracks(TrackSort.Status); if (tracks[0].Title != "Sunrise") throw new Exception("Header status sort failed.");
         SortTracks(TrackSort.Song); if (tracks[0].Title != "Night Drive") throw new Exception("Header song sort failed.");
+        var portrait=ArtworkPaint.Fit(new Size(100,200),new Rectangle(0,0,128,128));
+        if(portrait.Width!=64||portrait.Height!=128) throw new Exception("Portrait cover was stretched.");
+        tracks[0].CreatedAt="2026-10-01T09:10:00Z"; tracks[0].SunoVersion="V5.5"; tracks[0].Prompt="Style prompt:\nFull style text\n\nLyrics / generation prompt:\nLine one\nLine two";
+        viewPicker.SelectedIndex=1; artworkSize.SelectedIndex=2;
+        if(!tracks[0].Selected||viewPicker.SelectedIndex!=1) throw new Exception("Grid/size change lost selection.");
+        viewPicker.SelectedIndex=0; artworkSize.SelectedIndex=1;
         Size = MinimumSize; Show(); Application.DoEvents();
         Directory.CreateDirectory(directory);
         using var bitmap = new Bitmap(Width, Height); DrawToBitmap(bitmap, new Rectangle(Point.Empty, Size));
         bitmap.Save(Path.Combine(directory, "app.png"));
+        viewPicker.SelectedIndex=1; Application.DoEvents(); using(var tileBitmap=new Bitmap(Width,Height)) {DrawToBitmap(tileBitmap,new Rectangle(Point.Empty,Size));tileBitmap.Save(Path.Combine(directory,"grid.png"));}
+        viewPicker.SelectedIndex=0;
         if (pauseScan.Bottom > pauseScan.Parent!.ClientSize.Height || clearScan.Right > clearScan.Parent!.ClientSize.Width)
             throw new Exception($"Scan controls clipped: pause bottom {pauseScan.Bottom}, bar height {pauseScan.Parent.ClientSize.Height}, clear right {clearScan.Right}, bar width {clearScan.Parent!.ClientSize.Width}.");
         foreach (var bar in Controls.OfType<TableLayoutPanel>().SelectMany(p => p.Controls.OfType<FlowLayoutPanel>()))

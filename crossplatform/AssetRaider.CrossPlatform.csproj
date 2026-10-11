@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <AssemblyName>AssetRaider</AssemblyName>
     <RootNamespace>AssetRaider.Desktop</RootNamespace>
-    <Version>0.4.8</Version>
+    <Version>0.4.9</Version>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <DebugType>none</DebugType>
   </PropertyGroup>
@@ -21,5 +21,6 @@
     <Compile Include="../desktop/SourceQuality.cs;../desktop/SourceQualityCheck.cs" Link="Shared/%(Filename)%(Extension)" />
     <Compile Include="../desktop/PreviewPlayer.cs;../desktop/AudioSpectrum.cs" Link="Shared/%(Filename)%(Extension)" />
     <Compile Include="../desktop/PlaybackPlaylist.cs;../desktop/ArtworkDownload.cs" Link="Shared/%(Filename)%(Extension)" />
+    <Compile Include="../desktop/TrackMetadata.cs" Link="Shared/%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

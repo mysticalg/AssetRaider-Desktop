@@ -1,4 +1,6 @@
-# AssetRaider Desktop 0.3.8 — music player and live spectrum
+# AssetRaider Desktop 0.3.9 — library views and full prompts
+
+Artwork preserves portrait/landscape proportions, with Small/Medium/Large sizes and List/Grid views. Additional columns show creation date, release date when supplied, Suno's model badge and full prompt. The prompt viewer copies complete style, lyrics and excluded-style text. Metadata is read from existing library responses; missing release timestamps remain unavailable.
 
 Selection-header toggle; ascending/descending Song, numeric Length and Status sorting; artwork thumbnails with lazy loading and placeholders. Next and automatic advance follow the visible sorted list. Shuffle plays each track once per cycle; Repeat cycles Off/All/One. Scanned selections survive sorting and filtering. Clicking Play stops an active or paused scan, keeping tracks already found. Buffering is shown while a track loads. Preview controls remain blocked during recording.
 

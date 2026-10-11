@@ -23,7 +23,8 @@ internal sealed class ArtworkCache(Action changed) : IDisposable
                 using var data = SKData.CreateCopy(bytes); using var codec = SKCodec.Create(data);
                 if (codec != null && (long)codec.Info.Width * codec.Info.Height <= 8_000_000) {
                     using var decoded = SKBitmap.Decode(codec);
-                    using var small = decoded?.Resize(new SKImageInfo(48,48), SKFilterQuality.Medium);
+                    var ratio = 256d / Math.Max(codec.Info.Width, codec.Info.Height);
+                    using var small = decoded?.Resize(new SKImageInfo(Math.Max(1,(int)(codec.Info.Width * ratio)), Math.Max(1,(int)(codec.Info.Height * ratio))), SKFilterQuality.Medium);
                     if (small != null) {
                         using var png = small.Encode(SKEncodedImageFormat.Png,100); using var stream = new MemoryStream(png.ToArray());
                         using var source = Image.FromStream(stream); thumbnail = new Bitmap(source);

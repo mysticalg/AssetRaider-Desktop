@@ -15,6 +15,7 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
     private IBrowser? browser;
     private IPage? page;
     private SourceQualityMonitor? qualityMonitor;
+    private LibraryMetadataMonitor? metadataMonitor;
     private string preparedSource = "";
     public SourceQuality SourceQuality => qualityMonitor?.Read(preparedSource) ?? SourceQuality.Unknown;
     private Process? process;
@@ -99,6 +100,7 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
             ?? await browser.Contexts[0].NewPageAsync();
         page.SetDefaultTimeout(20000);
         page.SetDefaultNavigationTimeout(30000);
+        if (Site.Id == "suno") { metadataMonitor = new(page); await page.ReloadAsync(new() {WaitUntil=WaitUntilState.DOMContentLoaded}); }
         if (!Site.OwnsUrl(page.Url)) await page.GotoAsync(Site.LibraryUrl);
     }
     private IPage Page => browser?.IsConnected == true && page is { IsClosed: false } ? page : throw new IOException("Sign in, then Scan library first.");
@@ -129,16 +131,17 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
         await control.CheckpointAsync(cancellation);
         try { await tab.Locator(Site.LinkSelector).First.WaitForAsync(new() { Timeout = 12000 }); }
         catch (TimeoutException) { return $"No {Site.Name} tracks found in this view. Check the search, filters and sign-in in Open library / filters. The scanned list is empty."; }
-        return await LibraryScanner.RunAsync(new BrowserScanSource(tab, Site, search), control, found, cancellation);
+        return await LibraryScanner.RunAsync(new BrowserScanSource(tab, Site, search, metadataMonitor), control, found, cancellation);
     }
 
-    private sealed class BrowserScanSource(IPage tab, MusicSite site, string? query) : ILibraryScanSource
+    private sealed class BrowserScanSource(IPage tab, MusicSite site, string? query, LibraryMetadataMonitor? metadata) : ILibraryScanSource
     {
         public async Task ResetAsync() => _ = await BrowserData.ReadAsync<ScrollState>(tab, Script("scroll"), new { reset = true, site = site.Id });
         public async Task<Track[]> ReadAsync()
         {
             if (!site.IsLibraryUrl(tab.Url)) throw new IOException("The browser left the library. Open library / filters and start a fresh scan.");
             var tracks = await BrowserData.ReadAsync<Track[]>(tab, Script("library"), new { site = site.Id });
+            if(metadata != null) await metadata.EnrichAsync(tracks);
             // Ignore stale non-matching rows while the site's debounced search refreshes.
             return site.Id == "suno" && query != null
                 ? tracks.Where(t => t.Title.Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray() : tracks;
@@ -190,6 +193,7 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
     }
     public async ValueTask DisposeAsync()
     {
+        metadataMonitor?.Dispose(); metadataMonitor = null;
         await StopAsync();
         // RecorderQueue stops capture immediately after StopAsync. Optional diagnostics
         // cleanup must never delay that boundary and append silence to the WAV.

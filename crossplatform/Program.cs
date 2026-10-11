@@ -44,6 +44,9 @@ public sealed class App : Application
                         Directory.CreateDirectory(directory);
                         using var bitmap = new RenderTargetBitmap(new PixelSize((int)window.Width, (int)window.Height), new Vector(96, 96));
                         bitmap.Render(window); bitmap.Save(Path.Combine(directory, "app.png"));
+                        window.GridUiCheck();
+                        using var gridBitmap=new RenderTargetBitmap(new PixelSize((int)window.Width,(int)window.Height),new Vector(96,96));
+                        window.UpdateLayout(); gridBitmap.Render(window); gridBitmap.Save(Path.Combine(directory,"grid.png"));
                         File.WriteAllText(Path.Combine(directory, "ui-check.json"), "{\"Passed\":true,\"Rendered\":\"Main window and recording controls\"}");
                         desktop.Shutdown(0);
                     }

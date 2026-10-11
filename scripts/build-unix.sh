@@ -44,13 +44,13 @@ if [[ "$rid" == osx-* ]]; then
   codesign --verify --deep --strict "$app"
   "$app/Contents/MacOS/AssetRaider.Audio" --check
   "$app/Contents/MacOS/AssetRaider" --launch-check "$out/checks"
-  ditto -c -k --sequesterRsrc --keepParent "$app" "output/releases/AssetRaider-0.4.8-$rid.zip"
+  ditto -c -k --sequesterRsrc --keepParent "$app" "output/releases/AssetRaider-0.4.9-$rid.zip"
 else
   "$out/publish/AssetRaider" --launch-check "$out/checks"
   cp scripts/install-linux.sh "$out/publish/install.sh"
   cp scripts/uninstall-linux.sh "$out/publish/uninstall.sh"
   cp brand/app-icon.png "$out/publish/assetraider.png"
   chmod +x "$out/publish/install.sh" "$out/publish/uninstall.sh"
-  tar -czf "output/releases/AssetRaider-0.4.8-$rid.tar.gz" -C "$out" publish --transform='s,^publish,AssetRaider,'
+  tar -czf "output/releases/AssetRaider-0.4.9-$rid.tar.gz" -C "$out" publish --transform='s,^publish,AssetRaider,'
 fi
 cat "$out/checks/launch-check.json"

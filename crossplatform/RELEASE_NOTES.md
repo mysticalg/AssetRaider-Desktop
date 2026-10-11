@@ -1,4 +1,6 @@
-# AssetRaider 0.4.8 — music player and live spectrum
+# AssetRaider 0.4.9 — library views and full prompts
+
+Fitted artwork with adjustable sizes, List/Grid views, creation/release-date and model columns, and full prompt viewing/copying. Missing release dates remain unavailable. These controls share the Windows library metadata parser and preserve recording selection across view changes.
 
 Selection-column header toggle, ascending/descending Song/Length/Status sorting, artwork thumbnails, Next, automatic advance, Shuffle and Repeat Off/All/One. Playback follows the visible sorted list; numeric durations and missing lengths sort correctly. Playing a track stops an active or paused scan and keeps tracks found.
 

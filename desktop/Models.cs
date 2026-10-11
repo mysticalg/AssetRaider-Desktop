@@ -24,6 +24,21 @@ public sealed class Track : System.ComponentModel.INotifyPropertyChanged
     public string Title { get; set; } = "";
     public string Duration { get; set; } = "";
     public string ArtworkUrl { get; set; } = "";
+    public string CreatedAt { get; set; } = "";
+    public string ReleasedAt { get; set; } = "";
+    public string SunoVersion { get; set; } = "";
+    public string Prompt { get; set; } = "";
+    public string CreatedDate => DateText(CreatedAt);
+    public string ReleaseDate => DateText(ReleasedAt);
+    public void UpdateMetadata(Track fresh)
+    {
+        if(fresh.CreatedAt.Length>0) CreatedAt=fresh.CreatedAt;
+        if(fresh.ReleasedAt.Length>0) ReleasedAt=fresh.ReleasedAt;
+        if(fresh.SunoVersion.Length>0) SunoVersion=fresh.SunoVersion;
+        if(fresh.Prompt.Length>0) Prompt=fresh.Prompt;
+        foreach(var property in new[] {nameof(CreatedDate),nameof(ReleaseDate),nameof(SunoVersion),nameof(Prompt)}) PropertyChanged?.Invoke(this,new(property));
+    }
+    private static string DateText(string value) => DateTimeOffset.TryParse(value, out var date) ? date.ToLocalTime().ToString("yyyy-MM-dd HH:mm") : "—";
     public string Status { get => status; set { status = value; PropertyChanged?.Invoke(this, new(nameof(Status))); } }
     public string Site { get; set; } = "udio";
     public string Key => Site + ":" + Id;

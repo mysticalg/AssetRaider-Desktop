@@ -78,7 +78,7 @@ public sealed class LibraryCatalog
     private readonly Dictionary<string, Track> tracks = [];
     public int Count => tracks.Count;
     public void Clear() => tracks.Clear();
-    public bool Add(Track track) => tracks.TryAdd(track.Key, track);
+    public bool Add(Track track) {if(tracks.TryAdd(track.Key,track)) return true;tracks[track.Key].UpdateMetadata(track);return false;}
     public Track[] Matching(string? query, TrackSort sort = TrackSort.None, bool descending = false)
     {
         IEnumerable<Track> result = tracks.Values.Where(t => t.Title.Contains((query ?? "").Trim(), StringComparison.OrdinalIgnoreCase));

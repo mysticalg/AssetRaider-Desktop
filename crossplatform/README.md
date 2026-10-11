@@ -1,6 +1,8 @@
-# AssetRaider 0.4.8 beta — macOS and Linux
+# AssetRaider 0.4.9 beta — macOS and Linux
 
 ## Music player
+
+Choose **List** or **Grid** and **Small**, **Medium** or **Large** artwork. Covers keep their original proportions. Scroll the list horizontally for **Created**, **Released**, **Suno version** and a selectable **Full prompt** column. Choose **Full prompt / copy** or a card's **Full prompt** button to copy the complete style, lyrics/generation prompt and excluded styles when supplied. Dates use local time; an unavailable release timestamp is shown as **—**, never inferred from the creation date. Metadata comes from the library's existing responses and visible rows.
 
 The selection-column header toggles all visible tracks. Click **Song**, **Length** or **Status** to sort, then click again to reverse. Selections and the name filter are preserved; duration sorting is numeric. Track artwork loads as rows become visible.
 
