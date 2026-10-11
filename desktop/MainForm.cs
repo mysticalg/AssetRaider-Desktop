@@ -40,6 +40,7 @@ public sealed class MainForm : Form
     public MainForm()
     {
         player = new(browser);
+        player.Changed += RefreshPlayer;
         Text = "AssetRaider 0.3.7 — Udio + Suno WAV Recorder";
         MinimumSize = new Size(960, 840); Size = new Size(1160, 940);
         StartPosition = FormStartPosition.CenterScreen;
@@ -125,7 +126,7 @@ public sealed class MainForm : Form
         grid.GridColor = Color.FromArgb(230, 236, 225); grid.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
         grid.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(249, 251, 246);
         grid.Columns.Add(new DataGridViewCheckBoxColumn { DataPropertyName = nameof(Track.Selected), HeaderText = "✓", Width = 44 });
-        grid.Columns.Add(new DataGridViewButtonColumn { DataPropertyName = nameof(Track.PlaybackAction), Name = "Playback", HeaderText = "Player", Width = 82, ReadOnly = true });
+        grid.Columns.Add(new DataGridViewButtonColumn { DataPropertyName = nameof(Track.PlaybackAction), Name = "Playback", HeaderText = "Player", Width = 112, ReadOnly = true });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Title), HeaderText = "Song", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, FillWeight = 45, ReadOnly = true });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Duration), HeaderText = "Length", Width = 70, ReadOnly = true });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.SourceQualityText), HeaderText = "Source quality", Width = 255, ReadOnly = true,
@@ -269,7 +270,7 @@ public sealed class MainForm : Form
         var available = !playerBusy && cancellation == null && player.Track != null;
         playbackToggle.Enabled = playbackStop.Enabled = playbackSeek.Enabled = available;
         playbackToggle.Text = player.State?.Done == true ? "Replay" : player.State?.Paused == true ? "Resume" : "Pause";
-        nowPlaying.Text = player.Track == null ? "Music player · click Play beside a track · Chrome can stay minimized" : player.Track.Title + " · " + player.Track.SourceQualityText + (player.SpectrumError == null ? "" : " · Spectrum unavailable");
+        nowPlaying.Text = player.Track == null ? "Music player · click Play beside a track · Chrome can stay minimized" : player.Track.Title + " · " + (player.IsBuffering ? "Buffering…" : player.Track.SourceQualityText) + (player.SpectrumError == null ? "" : " · Spectrum unavailable");
         playbackTime.Text = $"{TimeSpan.FromSeconds(player.State?.Elapsed ?? 0):m\\:ss} / {TimeSpan.FromSeconds(player.State?.Duration ?? 0):m\\:ss}";
         if (!seekingPlayer) playbackSeek.Value = (int)Math.Clamp((player.State?.Elapsed ?? 0) / Math.Max(1, player.State?.Duration ?? 1) * 1000, 0, 1000);
         grid.InvalidateColumn(1);

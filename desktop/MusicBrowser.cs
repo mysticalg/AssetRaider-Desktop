@@ -4,7 +4,7 @@ using Microsoft.Playwright;
 
 namespace AssetRaider.Desktop;
 
-public sealed record PlayerState(double Duration, double Elapsed, bool Done, string Error, string Source = "", bool Paused = false);
+public sealed record PlayerState(double Duration, double Elapsed, bool Done, string Error, string Source = "", bool Paused = false, bool Buffering = false);
 public sealed record ScrollState(bool Bottom, double Position);
 public sealed record PageChange(bool Changed, string Error);
 

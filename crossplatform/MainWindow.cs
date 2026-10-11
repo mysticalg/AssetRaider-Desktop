@@ -47,6 +47,7 @@ public sealed class MainWindow : Window
     public MainWindow()
     {
         player = new(browser);
+        player.Changed += RefreshPlayer;
         Title = "AssetRaider 0.4.7 beta — Udio + Suno to WAV"; Width = 1120; Height = 960; MinWidth = 960; MinHeight = 840;
         Background = Brush.Parse("#101810");
         var root = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto,Auto,Auto"), Margin = new Thickness(24), RowSpacing = 10 };
@@ -99,7 +100,7 @@ public sealed class MainWindow : Window
         list.ItemsSource = tracks;
         list.Background = Brush.Parse("#192219"); list.BorderBrush = Brush.Parse("#34422E"); list.BorderThickness = new Thickness(1);
         list.ItemTemplate = new FuncDataTemplate<Track>((track, scope) => {
-            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,82,2*,Auto,2*,2*"), ColumnSpacing = 10, Margin = new Thickness(4, 7) };
+            var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,112,2*,Auto,2*,2*"), ColumnSpacing = 10, Margin = new Thickness(4, 7) };
             var selected = new CheckBox { VerticalAlignment = VerticalAlignment.Center }; selected.Bind(CheckBox.IsCheckedProperty, new Binding(nameof(Track.Selected)) { Source = track, Mode = BindingMode.TwoWay });
             row.Children.Add(selected);
             var play = new Button { Padding = new Thickness(8, 5), HorizontalAlignment = HorizontalAlignment.Stretch, VerticalAlignment = VerticalAlignment.Center };
@@ -216,7 +217,7 @@ public sealed class MainWindow : Window
         var available = !playerBusy && cancellation == null && player.Track != null;
         playbackToggle.IsEnabled = playbackStop.IsEnabled = playbackSeek.IsEnabled = available;
         playbackToggle.Content = player.State?.Done == true ? "Replay" : player.State?.Paused == true ? "Resume" : "Pause";
-        nowPlaying.Text = player.Track == null ? "Music player · click Play beside a track · Chrome can stay minimized" : player.Track.Title + " · " + player.Track.SourceQualityText + (player.SpectrumError == null ? "" : " · Spectrum unavailable");
+        nowPlaying.Text = player.Track == null ? "Music player · click Play beside a track · Chrome can stay minimized" : player.Track.Title + " · " + (player.IsBuffering ? "Buffering…" : player.Track.SourceQualityText) + (player.SpectrumError == null ? "" : " · Spectrum unavailable");
         playbackTime.Text = $"{TimeSpan.FromSeconds(player.State?.Elapsed ?? 0):m\\:ss} / {TimeSpan.FromSeconds(player.State?.Duration ?? 0):m\\:ss}";
         if (!seekingPlayer) playbackSeek.Value = Math.Clamp((player.State?.Elapsed ?? 0) / Math.Max(1, player.State?.Duration ?? 1) * 1000, 0, 1000);
     }

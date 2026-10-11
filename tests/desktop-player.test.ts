@@ -12,7 +12,7 @@ describe("desktop Udio playback controller", () => {
     vi.useFakeTimers();
     document.body.innerHTML = '<main><button aria-label="Play">Play this song</button></main>';
     audio = document.createElement("audio");
-    Object.defineProperties(audio, { duration: { value: 120 }, readyState: { value: 4 }, currentSrc: { value: "blob:song", configurable: true } });
+    Object.defineProperties(audio, { duration: { value: 120 }, readyState: { value: 4, configurable: true }, currentSrc: { value: "blob:song", configurable: true } });
     audio.currentTime = 17; audio.loop = true; audio.volume = .4;
     play = vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
     vi.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => undefined);
@@ -78,6 +78,21 @@ describe("desktop Udio playback controller", () => {
     document.body.innerHTML = '<button aria-label="Play">Wrong player</button><main></main>';
     await expect(prepare()).rejects.toThrow("not found");
     expect(play).not.toHaveBeenCalled();
+  });
+
+  it("reports buffering during a data wait or seek, and clears it for playback, pause and completion", async () => {
+    await prepare({ site: "suno", preview: true }); await api().start();
+    Object.defineProperty(audio, "paused", { value: false, configurable: true });
+    Object.defineProperty(audio, "readyState", { value: 2 });
+    expect(api().state().Buffering).toBe(true);
+    Object.defineProperty(audio, "readyState", { value: 4 });
+    expect(api().state().Buffering).toBe(false);
+    Object.defineProperty(audio, "seeking", { value: true, configurable: true });
+    expect(api().state().Buffering).toBe(true);
+    Object.defineProperty(audio, "paused", { value: true });
+    expect(api().state().Buffering).toBe(false);
+    Object.defineProperty(audio, "paused", { value: false }); audio.dispatchEvent(new Event("ended"));
+    expect(api().state().Buffering).toBe(false);
   });
 
   it("uses Suno's song button outside main and ignores its silent keep-alive audio", async () => {

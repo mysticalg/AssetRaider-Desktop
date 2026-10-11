@@ -72,7 +72,8 @@ async ({ site = 'udio', id, preview = false } = {}) => {
       if (src && (player.currentSrc || player.src) !== src && !done) error = 'The song changed during recording.';
       if (started && !done && !(preview && player.paused) && Date.now() - lastAdvance > 30000) error = 'Playback stalled or paused for 30 seconds.';
       if (started && Math.abs(player.playbackRate - 1) > .001) error = 'Playback speed changed during recording.';
-      return { Duration: duration, Elapsed: current, Done: done, Error: error, Source: src, Paused: player.paused };
+      const buffering = started && !done && !player.paused && (player.readyState < 3 || player.seeking);
+      return { Duration: duration, Elapsed: current, Done: done, Error: error, Source: src, Paused: player.paused, Buffering: buffering };
     }
   };
   try {
