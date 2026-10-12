@@ -52,6 +52,16 @@ h3{font-size:19px;line-height:1.4;font-weight:600;margin:0 0 9px;letter-spacing:
 .feature-list{display:grid;grid-template-columns:repeat(3,1fr);gap:42px;border-top:1px solid var(--line);padding-top:30px}
 .feature-number{font-size:13px;color:var(--green);display:block;margin-bottom:18px}
 .feature-list p{font-size:14px;color:var(--muted);margin:0}
+.screenshots{padding-bottom:66px}
+.screenshot-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.screenshot-grid figure{margin:0;min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+.screenshot-grid a{display:block;background:#e9ede5}
+.screenshot-grid img{display:block;width:100%;height:auto;object-fit:contain}
+.screenshot-grid figcaption{padding:18px 22px;display:flex;flex-direction:column;gap:4px}
+.screenshot-grid strong{font-size:16px;font-weight:600}
+.screenshot-grid span{font-size:13px;color:var(--muted)}
+.screenshot-grid .prompt-shot{grid-column:1/-1;width:min(714px,100%);justify-self:center}
+@media(max-width:760px){nav a[href="#start"]{display:none}.screenshots{padding-bottom:44px}.screenshot-grid{grid-template-columns:1fr;gap:18px}.screenshot-grid figcaption{padding:16px 18px}}
 .getting-started{border-block:1px solid var(--line);padding-block:66px;display:grid;grid-template-columns:1fr 1.15fr;gap:80px}
 .getting-started h2{font-size:44px;letter-spacing:-1.6px;line-height:1.1;margin:0 0 24px}
 .getting-started>div>p{color:var(--muted);font-size:14px}

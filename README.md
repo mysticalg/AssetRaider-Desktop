@@ -29,6 +29,14 @@ Choose **List** or **Grid** and **Small**, **Medium** or **Large** artwork. Cove
 
 Click **Play** beside a track. Pause, seek, Next, Shuffle and Repeat work while the dedicated Chrome window stays minimized. **Play** stops a running or paused scan and keeps the tracks already found. Recording stops preview playback first.
 
+## Screenshots
+
+Windows 0.3.9 with demo tracks and example metadata. Click the images in the [website gallery](https://mysticalg.github.io/AssetRaider-Desktop/#screenshots) to enlarge them.
+
+![AssetRaider artwork grid with demo tracks](docs/assets/screenshots/windows-grid.jpg)
+
+[List view](docs/assets/screenshots/windows-list.jpg) · [Artwork grid](docs/assets/screenshots/windows-grid.jpg) · [Full prompt viewer](docs/assets/screenshots/windows-prompt.jpg)
+
 ## Use
 
 1. Choose **Udio** or **Suno**. Click **Sign in (normal Chrome)** and sign in in the separate window. Close that window when finished.
