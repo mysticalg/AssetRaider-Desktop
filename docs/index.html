@@ -1,30 +1,93 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>AssetRaider — Udio & Suno playback to WAV</title>
-  <meta name="description" content="A free, open-source desktop app for recording selected Udio and Suno tracks into local WAV files. Download for Windows, macOS or Linux.">
-  <meta name="theme-color" content="#101310"><link rel="icon" href="assets/app-icon.png" type="image/png"><link rel="apple-touch-icon" href="assets/app-icon.png"><link rel="stylesheet" href="styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AssetRaider — Your music, saved locally</title>
+  <meta name="description" content="Listen, browse and record your Udio and Suno library. Free, open-source desktop downloads for Windows, Apple Silicon and Intel Macs, and Linux.">
+  <meta name="theme-color" content="#101310">
+  <meta property="og:title" content="AssetRaider — Your music, saved locally">
+  <meta property="og:description" content="A desktop player and WAV recorder for your Udio and Suno library. Windows, macOS and Linux.">
+  <meta property="og:image" content="https://mysticalg.github.io/AssetRaider-Desktop/assets/music-library-hero.png">
+  <meta property="og:url" content="https://mysticalg.github.io/AssetRaider-Desktop/">
+  <link rel="icon" href="assets/app-icon.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/app-icon.png">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<header class="wrap nav"><a class="brand" href="#" aria-label="AssetRaider home"><img class="brand-icon" src="assets/app-icon.png" alt="" width="44" height="44"> AssetRaider<span class="desktop"> / DESKTOP</span></a><nav aria-label="Main navigation"><a href="#start">How it works</a><a href="https://github.com/mysticalg/AssetRaider-Desktop">GitHub <span aria-hidden="true">↗</span></a></nav></header>
-<main>
-<section class="wrap hero">
-  <div class="intro"><div class="eyebrow"><span class="dot"></span> WINDOWS · MACOS · LINUX</div><h1>Your music.<br><span>Saved locally.</span></h1><p class="lead">Turn Udio and Suno playback into WAV files. Pick your tracks, start the queue, and let AssetRaider record them to your computer.</p>
-  <div class="downloads"><a class="button primary" href="#downloads">Choose your download <span aria-hidden="true">↓</span></a><a class="portable" href="https://github.com/mysticalg/AssetRaider-Desktop">Free & open source ↗</a></div>
-  <p class="meta">Public beta · Per-track source quality · Runtime included</p></div>
-  <div class="visual" aria-label="Illustration of a recording queue, with example tracks"><div class="windowbar"><span><i></i><i></i><i></i></span><b>YOUR RECORDING QUEUE</b><span class="smallbadge">WAV</span></div><div class="platforms"><span>Udio</span><span>Suno</span><small>One local library at a time</small></div><div class="track"><span class="check">✓</span><div><strong>Late night sketches</strong><small>Example track · 03:24</small></div><span class="done">Saved</span></div><div class="track"><span class="check">✓</span><div><strong>A little further</strong><small>Example track · 02:48</small></div><span class="recording">Recording</span></div><div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="track"><span class="check">✓</span><div><strong>Morning variations</strong><small>Example track · 04:06</small></div><span class="queued">Queued</span></div><div class="windowfoot"><span>48 kHz / 16-bit stereo</span><span>Saved on your PC <span class="dot"></span></span></div><p class="illustration">Queue illustration — example tracks</p></div>
-</section>
-<section class="wrap beta"><span class="beta-label">PUBLIC BETA</span><p>Suno recording on Windows is user-confirmed after the animated-cover fix (11 October 2026). Native builds and data checks pass, with audio capture tested on Windows and Linux. Interactive Mac capture and full signed-in service queues still need testing. <a href="https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.5-beta.1">Read the release notes →</a></p></section>
-<section class="wrap download-section" id="downloads"><div class="section-title"><h2>Pick your platform.</h2><p>The .NET runtime is included in every download.</p></div><div class="download-grid">
-<article><span class="number">WINDOWS / 0.3.5 BETA</span><h3>Windows</h3><p>Windows 11 · x64<br>Installer or portable folder.</p><a class="button primary" href="https://github.com/mysticalg/AssetRaider-Desktop/releases/download/v0.3.5-beta.1/AssetRaider-0.3.5-Setup.exe">Download installer ↓</a><a href="https://github.com/mysticalg/AssetRaider-Desktop/releases/download/v0.3.5-beta.1/AssetRaider-0.3.5-Windows-x64.zip">Portable ZIP ↗</a><small>Unsigned Windows build.</small></article>
-<article><span class="number">MACOS / 0.4.6 BETA</span><h3>Mac</h3><p>macOS 14 Sonoma or newer.<br>Extract, then move the app to Applications.</p><a class="button primary" href="https://github.com/mysticalg/AssetRaider-Desktop/releases/download/v0.4.6-beta.1/AssetRaider-0.4.6-osx-arm64.zip">Apple Silicon download ↓</a><a href="https://github.com/mysticalg/AssetRaider-Desktop/releases/download/v0.4.6-beta.1/AssetRaider-0.4.6-osx-x64.zip">Intel Mac download ↗</a><small>Not Apple notarized; macOS may block opening. Screen & System Audio Recording permission required.</small></article>
-<article><span class="number">LINUX / 0.4.6 BETA</span><h3>Linux</h3><p>x86-64 · Ubuntu 22.04+ or comparable.<br>PulseAudio or PipeWire-Pulse required.</p><a class="button primary" href="https://github.com/mysticalg/AssetRaider-Desktop/releases/download/v0.4.6-beta.1/AssetRaider-0.4.6-linux-x64.tar.gz">Linux download ↓</a><a href="https://github.com/mysticalg/AssetRaider-Desktop/blob/main/crossplatform/README.md#linux">Install instructions ↗</a><small>Install pulseaudio-utils. Native Chrome required; recording uses a separate silent audio channel.</small></article>
-</div><p class="download-help"><a href="https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.4.6-beta.1">Mac/Linux release notes & checksums ↗</a> · <a href="https://github.com/mysticalg/AssetRaider-Desktop/blob/main/crossplatform/README.md">Mac/Linux setup guide ↗</a></p></section>
-<section class="wrap features" aria-label="Features"><article><span class="number">01 / CHOOSE</span><h2>Your tracks. Your selection.</h2><p>Search tracks by name, use site filters, or select every visible match. Suno opens your personal library at /me.</p></article><article><span class="number">02 / RECORD</span><h2>A queue that keeps going.</h2><p>Pause and resume library scans, or clear the scanned list and start again. Record normal playback into separate WAVs. Completed tracks are remembered locally. Choose “Record again (new copy)” whenever you want a fresh recording; existing WAVs stay intact.</p></article><article><span class="number">03 / KEEP</span><h2>Files you can work with.</h2><p>Standard stereo WAV files, saved in the folder you choose. No AssetRaider account or cloud upload.</p></article></section>
-<section class="wrap getting-started" id="start"><div><span class="eyebrow">FROM DOWNLOAD TO PLAYBACK</span><h2>Three steps.<br>Then let it play.</h2><p>No extension. No separate .NET install.</p></div><ol><li><span>1</span><div><h3>Install and choose a site</h3><p>Choose your platform above and follow its install steps. Open AssetRaider, then select Udio or Suno.</p></div></li><li><span>2</span><div><h3>Sign in with normal Chrome</h3><p>Click “Sign in (normal Chrome)”. Sign in in the separate window and close it when finished.</p></div></li><li><span>3</span><div><h3>Select tracks and record</h3><p>Open your library and choose filters, then Scan library. Type a track name and press “Find in library” to search Suno directly. Select visible matches, pick a save folder and click “Record selected as WAV”. Keep the dedicated Chrome window open and the computer awake. Linux records silently through its dedicated audio channel.</p></div></li></ol></section>
-<section class="wrap details"><h2>A few things to know</h2><div class="detail-grid"><article><h3>Playback takes playback time</h3><p>A four-minute track takes about four minutes to record. WAVs use roughly 11 MB per minute. The dedicated browser can stay behind your other windows.</p></article><article><h3>WAV format, streaming quality</h3><p>See each recording’s source codec, approximate bitrate, sample rate and channels when Chrome exposes them. Unknown values stay unknown. These are playback recordings, not original masters; saving as WAV does not improve source quality.</p></article><article><h3>Local by design</h3><p>Sign-ins use separate local Chrome profiles. Audio is captured from that browser process, not your microphone. Recordings stay in your chosen folder.</p></article><article><h3>An unsigned beta</h3><p>The installer is not code-signed, so Windows may show an unknown-publisher warning. You can inspect the source or build it yourself. <a href="https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.5-beta.1">Release notes & checksums ↗</a></p></article></div></section>
-<section class="wrap closing"><div><h2>Make room for your next idea.</h2><p>Free to use. Open to improve.</p></div><a class="button primary" href="#downloads">Get AssetRaider <span aria-hidden="true">↓</span></a></section>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="wrap nav">
+  <a class="brand" href="#" aria-label="AssetRaider home"><img src="assets/app-icon.png" alt="" width="44" height="44">AssetRaider</a>
+  <nav aria-label="Main navigation"><a href="#features">Features</a><a href="#start">Setup</a><a href="https://github.com/mysticalg/AssetRaider-Desktop">Source ↗</a><a class="nav-download" href="#downloads">Download ↓</a></nav>
+</header>
+<main id="main">
+  <section class="wrap hero">
+    <div class="intro">
+      <h1>Your music.<br><span>Saved locally.</span></h1>
+      <p class="lead">A player for your Udio and Suno collection. Browse the artwork, find your tracks, and record the ones you love as local WAV files.</p>
+      <div class="hero-actions"><a class="button primary" href="#downloads">Get AssetRaider <span aria-hidden="true">↓</span></a><a class="text-link" href="#features">Explore the update →</a></div>
+      <p class="meta">Free & open source · Windows, macOS & Linux</p>
+    </div>
+    <figure class="hero-art"><img src="assets/music-library-hero.png" alt="Glowing audio waves flow through abstract album covers into a metallic recording reel" width="1672" height="941" fetchpriority="high"><figcaption>Listen. Collect. Create.</figcaption></figure>
+  </section>
+  <section class="wrap release-strip" aria-label="Latest update"><p><strong>New: your library, in full colour.</strong> Larger artwork. List or grid. Track dates, Suno versions and copyable prompts.</p><a href="https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.9-beta.1">Release notes ↗</a></section>
+  <section class="wrap download-section" id="downloads">
+    <div class="section-title"><h2>Find your platform.</h2><p>Public beta · Updated 12 October 2026<br>The .NET runtime is included. Google Chrome is required.</p></div>
+    <div class="download-grid">
+      <article>
+        <div class="platform-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5 11 4v7H3zm10-1 8-1v8h-8zM3 13h8v7l-8-1zm10 0h8v8l-8-1z"/></svg><span class="version">0.3.9 beta</span></div>
+        <h3>Windows</h3><p>Windows 11 · x64<br>Install for your account, or run it portable.</p>
+        <a class="button primary" href="https://github.com/mysticalg/AssetRaider-Desktop/releases/download/v0.3.9-beta.1/AssetRaider-0.3.9-Setup.exe">Download installer <span aria-hidden="true">↓</span></a>
+        <a class="text-link" href="https://github.com/mysticalg/AssetRaider-Desktop/releases/download/v0.3.9-beta.1/AssetRaider-0.3.9-Windows-x64.zip">Portable ZIP ↗</a>
+        <small>Unsigned build; Windows may show an unknown-publisher warning.</small>
+        <a class="checksum" href="https://github.com/mysticalg/AssetRaider-Desktop/releases/download/v0.3.9-beta.1/SHA256SUMS.txt">SHA-256 checksums</a>
+      </article>
+      <article>
+        <div class="platform-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.8 2c.1 1.5-.6 2.8-1.5 3.6-.8.8-2.1 1.4-3.2 1.3-.2-1.5.5-2.8 1.4-3.7.9-.8 2.3-1.4 3.3-1.2ZM18.5 17.3c-.5 1.2-1 2.2-1.9 3.2-.8.9-1.7 1.7-2.9 1.7-1.1 0-1.4-.7-2.9-.7s-1.8.7-2.9.7c-1.1.1-2-.9-2.8-1.8-2.3-2.7-3.4-7.6-1.6-10.6.9-1.5 2.4-2.5 4.2-2.5 1.2 0 2.3.8 3.1.8s2.1-1 3.6-.9c1.3.1 2.5.5 3.3 1.5-3 1.8-2.5 5.9.8 7.2z"/></svg><span class="version">0.4.9 beta</span></div>
+        <h3>Mac</h3><p>macOS 14 Sonoma or newer<br>Choose Apple Silicon or Intel.</p>
+        <a class="button primary" href="https://github.com/mysticalg/AssetRaider-Desktop/releases/download/v0.4.9-beta.1/AssetRaider-0.4.9-osx-arm64.zip">Apple Silicon <span aria-hidden="true">↓</span></a>
+        <a class="text-link" href="https://github.com/mysticalg/AssetRaider-Desktop/releases/download/v0.4.9-beta.1/AssetRaider-0.4.9-osx-x64.zip">Intel Mac ZIP ↗</a>
+        <small>Extract and move to Applications. Not Apple notarized; macOS may block opening. Audio-recording permission is required.</small>
+        <a class="checksum" href="https://github.com/mysticalg/AssetRaider-Desktop/releases/download/v0.4.9-beta.1/SHA256SUMS.txt">SHA-256 checksums</a>
+      </article>
+      <article>
+        <div class="platform-heading"><svg viewBox="0 0 24 24" aria-hidden="true" class="terminal-icon"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3m6 0h4"/></svg><span class="version">0.4.9 beta</span></div>
+        <h3>Linux</h3><p>x86-64 · Ubuntu 22.04+ or comparable<br>PulseAudio or PipeWire-Pulse.</p>
+        <a class="button primary" href="https://github.com/mysticalg/AssetRaider-Desktop/releases/download/v0.4.9-beta.1/AssetRaider-0.4.9-linux-x64.tar.gz">Download archive <span aria-hidden="true">↓</span></a>
+        <a class="text-link" href="https://github.com/mysticalg/AssetRaider-Desktop/blob/main/crossplatform/README.md#linux">Installation guide ↗</a>
+        <small>Install pulseaudio-utils. Extract and launch, or use the included per-user installer. Native Chrome required.</small>
+        <a class="checksum" href="https://github.com/mysticalg/AssetRaider-Desktop/releases/download/v0.4.9-beta.1/SHA256SUMS.txt">SHA-256 checksums</a>
+      </article>
+    </div>
+    <p class="download-help">Close AssetRaider before updating. Your recordings and sign-ins are retained. <a href="https://github.com/mysticalg/AssetRaider-Desktop/blob/main/crossplatform/README.md">Mac/Linux setup and permissions ↗</a></p>
+  </section>
+  <section class="wrap features" id="features">
+    <div class="section-title"><h2>More than a download queue.</h2><p>A clearer view of your collection, with playback close at hand.</p></div>
+    <div class="feature-list">
+      <article><span class="feature-number">01</span><div><h3>Browse your way.</h3><p>Switch between a compact list and an artwork grid. Choose Small, Medium or Large covers without stretching them. Search by name, sort by song, length or status, and toggle every visible track from the selection header.</p></div></article>
+      <article><span class="feature-number">02</span><div><h3>The story behind each track.</h3><p>See creation dates, release dates when supplied, and Suno’s model version. Open the full prompt to read and copy the style, lyrics or generation instructions, and excluded styles. Missing release dates stay blank rather than being guessed.</p></div></article>
+      <article><span class="feature-number">03</span><div><h3>Play it. Then keep it.</h3><p>Play, pause, seek, skip, shuffle and repeat from the app while Chrome stays minimized. Buffering feedback and a live audio spectrum show what’s happening. Playing a track stops a scan and keeps the results already found.</p></div></article>
+    </div>
+  </section>
+  <section class="wrap getting-started" id="start">
+    <div><h2>Three steps.<br><span>Then let it play.</span></h2><p>No browser extension.<br>No separate .NET installation.</p></div>
+    <ol>
+      <li><span>1</span><div><h3>Install and choose a site</h3><p>Choose your platform above. Open AssetRaider and select Udio or Suno.</p></div></li>
+      <li><span>2</span><div><h3>Sign in with normal Chrome</h3><p>Click “Sign in (normal Chrome)”. Sign in in the separate window, then close that window when finished.</p></div></li>
+      <li><span>3</span><div><h3>Find tracks and record</h3><p>Open library / filters, choose your view, then Scan library. “Find in library” searches Suno directly. Select tracks, choose a save folder, and click “Record selected as WAV”. Keep the app’s Chrome window open and your computer awake.</p></div></li>
+    </ol>
+  </section>
+  <section class="wrap details">
+    <h2>Know what you’re saving.</h2>
+    <div class="detail-grid">
+      <article><h3>WAV format, playback quality</h3><p>48 kHz / 16-bit stereo WAV, about 11 MB per minute. Recordings happen at normal playback speed. See source codec, approximate bitrate, sample rate and channels when Chrome exposes them; unavailable fields are omitted. WAV conversion does not improve compressed source audio or recover original masters.</p></article>
+      <article><h3>Your files stay yours</h3><p>Separate local Chrome sign-ins. No AssetRaider account, analytics or cloud upload. Audio comes from the dedicated browser, not your microphone. Completed recordings are remembered; “Record again (new copy)” preserves the existing files.</p></article>
+      <article><h3>Pause a scan. Keep your place.</h3><p>Pause and resume scanning, filter tracks as they arrive, or clear the list without deleting recordings. Select all and recording apply to the visible matches. Linux recording uses a separate silent audio channel; preview playback goes to your speakers.</p></article>
+      <article><h3>A public beta, tested openly</h3><p>Windows installer, source-quality and interface checks pass. Native Mac builds and launch checks pass; Linux also passes audio-capture and interface checks. Interactive Mac recording and full signed-in queues on Mac/Linux still need testing. <a href="https://github.com/mysticalg/AssetRaider-Desktop/actions">See the build checks ↗</a></p></article>
+    </div>
+  </section>
+  <section class="wrap closing"><div><h2>Make room for your next idea.</h2><p>Free to use. Open to improve.</p></div><a class="button primary" href="#downloads">Get AssetRaider <span aria-hidden="true">↓</span></a></section>
 </main>
 <footer class="wrap"><p>AssetRaider Desktop · MIT licensed</p><p>Independent of Udio and Suno. Record audio you have permission to use.</p><a href="https://github.com/mysticalg/AssetRaider-Desktop/issues">Support ↗</a></footer>
-</body></html>
+</body>
+</html>
