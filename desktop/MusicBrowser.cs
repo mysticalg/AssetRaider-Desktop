@@ -103,6 +103,7 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
         if (Site.Id == "suno") { metadataMonitor = new(page); await page.ReloadAsync(new() {WaitUntil=WaitUntilState.DOMContentLoaded}); }
         if (!Site.OwnsUrl(page.Url)) await page.GotoAsync(Site.LibraryUrl);
     }
+    public bool IsConnected => browser?.IsConnected == true && page is { IsClosed: false };
     private IPage Page => browser?.IsConnected == true && page is { IsClosed: false } ? page : throw new IOException("Sign in, then Scan library first.");
 
     public async Task OpenLibraryAsync()
@@ -131,10 +132,10 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
         await control.CheckpointAsync(cancellation);
         try { await tab.Locator(Site.LinkSelector).First.WaitForAsync(new() { Timeout = 12000 }); }
         catch (TimeoutException) { return $"No {Site.Name} tracks found in this view. Check the search, filters and sign-in in Open library / filters. The scanned list is empty."; }
-        return await LibraryScanner.RunAsync(new BrowserScanSource(tab, Site, search, metadataMonitor), control, found, cancellation);
+        return await LibraryScanner.RunAsync(new BrowserScanSource(tab, Site, metadataMonitor), control, found, cancellation, updated: found);
     }
 
-    private sealed class BrowserScanSource(IPage tab, MusicSite site, string? query, LibraryMetadataMonitor? metadata) : ILibraryScanSource
+    private sealed class BrowserScanSource(IPage tab, MusicSite site, LibraryMetadataMonitor? metadata) : ILibraryScanSource
     {
         public async Task ResetAsync() => _ = await BrowserData.ReadAsync<ScrollState>(tab, Script("scroll"), new { reset = true, site = site.Id });
         public async Task<Track[]> ReadAsync()
@@ -142,9 +143,8 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
             if (!site.IsLibraryUrl(tab.Url)) throw new IOException("The browser left the library. Open library / filters and start a fresh scan.");
             var tracks = await BrowserData.ReadAsync<Track[]>(tab, Script("library"), new { site = site.Id });
             if(metadata != null) await metadata.EnrichAsync(tracks);
-            // Ignore stale non-matching rows while the site's debounced search refreshes.
-            return site.Id == "suno" && query != null
-                ? tracks.Where(t => t.Title.Contains(query, StringComparison.OrdinalIgnoreCase)).ToArray() : tracks;
+            // Suno owns search semantics: tags and other matches can have unrelated titles.
+            return tracks;
         }
         public Task<ScrollState> ScrollAsync() => BrowserData.ReadAsync<ScrollState>(tab, Script("scroll"), new { reset = false, site = site.Id });
         public Task<bool> ChangePageAsync(string direction, CancellationToken token) => site.Id == "suno" ? ChangeSunoPageAsync(tab, direction, token) : Task.FromResult(false);
@@ -175,9 +175,12 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
         await tab.Locator(Site.PlaySelector + ":visible").First.WaitForAsync();
         cancellation.ThrowIfCancellationRequested();
         var duration = await tab.EvaluateAsync<double>(Script("player"), new { site = Site.Id, id = track.Id, preview }).WaitAsync(cancellation);
+        if (preview) await ApplyEqualizerAsync().WaitAsync(cancellation);
         await StateAsync().WaitAsync(cancellation);
         return duration;
     }
+    public AudioPreferences AudioSettings { get; set; } = new();
+    public Task ApplyEqualizerAsync() => page is { IsClosed: false } ? page.EvaluateAsync(Script("equalizer"), new { gains = AudioSettings.Gains, enabled = AudioSettings.Enabled, gainDb = AudioSettings.GainDb }) : Task.CompletedTask;
     public Task StartAsync() => Page.EvaluateAsync("() => window.__assetRaiderDesktop.start()");
     public Task PausePlaybackAsync() => Page.EvaluateAsync("() => window.__assetRaiderDesktop.pause()");
     public Task SeekPlaybackAsync(double seconds) => Page.EvaluateAsync("seconds => window.__assetRaiderDesktop.seek(seconds)", seconds);

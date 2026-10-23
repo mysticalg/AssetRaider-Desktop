@@ -34,7 +34,7 @@ public interface ILibraryScanSource
 public static class LibraryScanner
 {
     public static async Task<string> RunAsync(ILibraryScanSource source, ScanControl control, Action<Track[]> found,
-        CancellationToken token, TimeSpan? interval = null)
+        CancellationToken token, TimeSpan? interval = null, Action<Track[]>? updated = null)
     {
         var seen = new HashSet<string>();
         async Task Check() {
@@ -55,6 +55,7 @@ public static class LibraryScanner
             await Check();
             var fresh = tracks.Where(t => seen.Add(t.Key)).ToArray();
             if (fresh.Length > 0) { found(fresh); unchanged = 0; }
+            else if(tracks.Length>0) updated?.Invoke(tracks);
             await Check();
             var scroll = await source.ScrollAsync();
             unchanged = fresh.Length == 0 && scroll.Bottom ? unchanged + 1 : 0;
@@ -79,9 +80,9 @@ public sealed class LibraryCatalog
     public int Count => tracks.Count;
     public void Clear() => tracks.Clear();
     public bool Add(Track track) {if(tracks.TryAdd(track.Key,track)) return true;tracks[track.Key].UpdateMetadata(track);return false;}
-    public Track[] Matching(string? query, TrackSort sort = TrackSort.None, bool descending = false)
+    public Track[] Matching(string? query, TrackSort sort = TrackSort.None, bool descending = false, bool tags = false)
     {
-        IEnumerable<Track> result = tracks.Values.Where(t => t.Title.Contains((query ?? "").Trim(), StringComparison.OrdinalIgnoreCase));
+        IEnumerable<Track> result = tracks.Values.Where(t => (tags ? t.Tags : t.Title).Contains((query ?? "").Trim(), StringComparison.OrdinalIgnoreCase));
         IOrderedEnumerable<Track>? ordered = sort switch {
             TrackSort.Song => descending ? result.OrderByDescending(t => t.Title, StringComparer.CurrentCultureIgnoreCase) : result.OrderBy(t => t.Title, StringComparer.CurrentCultureIgnoreCase),
             TrackSort.Status => descending ? result.OrderByDescending(t => t.Status, StringComparer.CurrentCultureIgnoreCase) : result.OrderBy(t => t.Status, StringComparer.CurrentCultureIgnoreCase),

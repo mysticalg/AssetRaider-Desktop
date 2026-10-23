@@ -5,6 +5,7 @@ internal static class Program
     [STAThread]
     static int Main(string[] args)
     {
+        if (args.Contains("--audio-check")) return AudioCheck.RunAsync(args.Last()).GetAwaiter().GetResult();
         if (args.Contains("--self-test")) return SelfTest.RunAsync(args.Last()).GetAwaiter().GetResult();
         if (args.Contains("--launch-check")) return SelfTest.CheckLaunch(args.Last());
         if (args.Contains("--quality-check")) return SourceQualityCheck.RunBrowserAsync(args.Last()).GetAwaiter().GetResult();

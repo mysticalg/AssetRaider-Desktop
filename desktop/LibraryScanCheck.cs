@@ -17,6 +17,11 @@ internal static class LibraryScanCheck
         Require(catalog.Matching(" NIGHT ").Single() == first, "Name search must trim and ignore case.");
         Require(catalog.Matching("sun").All(t => !t.Selected), "Hidden selections must not enter the visible recording queue.");
         Require(catalog.Matching("").Length == 2 && catalog.Matching("missing").Length == 0, "Search reset/empty results failed.");
+        first.Tags="synthwave, ambient";
+        Require(catalog.Matching("AMBIENT", tags:true).Single()==first,"Tag search failed.");
+        Require(catalog.Matching("Night", tags:true).Length==0,"Tag search incorrectly searched titles.");
+        catalog.Add(new(){Id=first.Id,Site=first.Site,Tags="electronic"});
+        Require(catalog.Matching("electronic", tags:true).Single()==first && first.Selected,"Metadata enrichment lost tags or selection.");
         first.Duration = "10:00"; first.Status = "Saved WAV";
         var second = catalog.Matching("sun").Single(); second.Duration = "9:59"; second.Status = "Ready";
         Require(catalog.Matching("",TrackSort.Song,true).First() == second, "Song descending order failed.");

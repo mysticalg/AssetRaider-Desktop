@@ -2,7 +2,7 @@ using System.Text.Json;
 using Microsoft.Playwright;
 namespace AssetRaider.Desktop;
 
-public sealed record TrackMetadata(string CreatedAt, string ReleasedAt, string Version, string Prompt)
+public sealed record TrackMetadata(string CreatedAt, string ReleasedAt, string Version, string Prompt, string Tags = "")
 {
     private static string Text(JsonElement element, string name) => element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : "";
     public static Dictionary<string, TrackMetadata> Parse(string json)
@@ -24,7 +24,7 @@ public sealed record TrackMetadata(string CreatedAt, string ReleasedAt, string V
                 if (styles.Length == 0) styles = Text(meta,"gpt_description_prompt");
                 var prompt = string.Join("\n\n", new[] { styles.Length > 0 ? "Style prompt:\n" + styles : "", lyrics.Length > 0 ? "Lyrics / generation prompt:\n" + lyrics : "", excluded.Length > 0 ? "Excluded styles:\n" + excluded : "" }.Where(s=>s.Length>0));
                 var release = Text(element,"published_at"); if (release.Length == 0) release = Text(element,"released_at");
-                result[id] = new(Text(element,"created_at"), release, version, prompt);
+                result[id] = new(Text(element,"created_at"), release, version, prompt, styles);
             }
             foreach (var value in element.EnumerateObject()) Visit(value.Value);
         }
@@ -34,7 +34,7 @@ public sealed record TrackMetadata(string CreatedAt, string ReleasedAt, string V
     {
         const string id="11111111-1111-4111-8111-111111111111";
         var data=Parse("{\"clips\":[{\"id\":\""+id+"\",\"created_at\":\"2026-01-02T03:04:05Z\",\"is_public\":true,\"major_model_version\":\"v5\",\"metadata\":{\"tags\":\"full style\\nsecond line\",\"prompt\":\"verse\\nchorus\",\"model_badges\":{\"songrow\":{\"display_name\":\"V5.5\"}}}}]}")[id];
-        if(data.ReleasedAt.Length!=0 || data.Version!="V5.5" || !data.Prompt.Contains("verse\nchorus") || !data.Prompt.Contains("full style\nsecond line")) throw new Exception("Full prompt, badge or unavailable release date failed.");
+        if(data.Tags!="full style\nsecond line" || data.ReleasedAt.Length!=0 || data.Version!="V5.5" || !data.Prompt.Contains("verse\nchorus") || !data.Prompt.Contains("full style\nsecond line")) throw new Exception("Full prompt, badge or unavailable release date failed.");
         var published=Parse("{\"id\":\""+id+"\",\"published_at\":\"2026-02-03T00:00:00Z\",\"metadata\":{}}")[id];
         if(published.ReleasedAt!="2026-02-03T00:00:00Z") throw new Exception("Explicit publication timestamp lost.");
     }
@@ -51,7 +51,7 @@ public sealed class LibraryMetadataMonitor : IDisposable
     public LibraryMetadataMonitor(IPage page) { this.page=page; page.Response += Response; }
     private void Response(object? sender, IResponse response)
     {
-        if (!Uri.TryCreate(response.Url,UriKind.Absolute,out var uri) || !uri.Host.EndsWith(".suno.com",StringComparison.OrdinalIgnoreCase) || !(uri.AbsolutePath.StartsWith("/api/feed/") || uri.AbsolutePath=="/api/unified/feed")) return;
+        if (!Uri.TryCreate(response.Url,UriKind.Absolute,out var uri) || !uri.Host.EndsWith(".suno.com",StringComparison.OrdinalIgnoreCase) || !(uri.AbsolutePath.StartsWith("/api/feed/") || uri.AbsolutePath=="/api/unified/feed" || uri.AbsolutePath.StartsWith("/api/search/"))) return;
         lock(gate) { if(disposed) return; pending.RemoveAll(t=>t.IsCompleted); pending.Add(Read(response)); }
     }
     private async Task Read(IResponse response)
@@ -66,7 +66,7 @@ public sealed class LibraryMetadataMonitor : IDisposable
     {
         Task[] work; lock(gate) work=pending.ToArray();
         try { await Task.WhenAll(work).WaitAsync(TimeSpan.FromSeconds(2)); } catch { }
-        lock(gate) foreach(var track in tracks) if(clips.TryGetValue(track.Id,out var data)) { track.CreatedAt=data.CreatedAt; track.ReleasedAt=data.ReleasedAt; track.SunoVersion=data.Version; if(data.Prompt.Length>0) track.Prompt=data.Prompt; }
+        lock(gate) foreach(var track in tracks) if(clips.TryGetValue(track.Id,out var data)) { track.CreatedAt=data.CreatedAt; track.ReleasedAt=data.ReleasedAt; track.SunoVersion=data.Version; track.Tags=data.Tags; if(data.Prompt.Length>0) track.Prompt=data.Prompt; }
     }
     public void Dispose() { page.Response -= Response; lock(gate) { disposed=true; clips.Clear(); pending.Clear(); } }
 }

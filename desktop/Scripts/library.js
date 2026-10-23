@@ -17,7 +17,7 @@
     const artwork = image?.getAttribute('data-src') || image?.currentSrc || image?.src || '';
     const badge = site === 'suno' ? row?.querySelector('[class*="font-mono"][class*="uppercase"]')?.textContent?.trim() || '' : '';
     const description = site === 'suno' ? a.closest('[class*="clip-title-wrapper"]')?.parentElement?.parentElement?.nextElementSibling?.textContent || '' : '';
-    tracks.set(id, { Id: id, Title: title, Duration: duration, Site: site, ArtworkUrl: artwork.startsWith('https://') ? artwork : '', SunoVersion: badge, Prompt: description ? 'Style prompt:\n' + description : '' });
+    tracks.set(id, { Id: id, Title: title, Duration: duration, Site: site, ArtworkUrl: artwork.startsWith('https://') ? artwork : '', SunoVersion: badge, Tags: description.trim(), Prompt: description ? 'Style prompt:\n' + description : '' });
   }
   return [...tracks.values()];
 }

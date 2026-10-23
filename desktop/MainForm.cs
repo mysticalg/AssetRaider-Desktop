@@ -7,6 +7,9 @@ namespace AssetRaider.Desktop;
 public sealed class MainForm : Form
 {
     private readonly MusicBrowser browser = new();
+    private readonly AudioPreferences audioSettings = AudioPreferences.Load();
+    private readonly System.Windows.Forms.Timer eqTimer = new() { Interval = 100 };
+    private bool updatingEq;
     private readonly PreviewPlayer player;
     private readonly Label nowPlaying = new() { Text = "Music player · click Play beside a track", AutoEllipsis = true, Dock = DockStyle.Fill };
     private readonly Label playbackTime = new() { Text = "0:00 / 0:00", AutoSize = true };
@@ -29,7 +32,10 @@ public sealed class MainForm : Form
     private readonly ComboBox sitePicker = new();
     private readonly BindingList<Track> tracks = [];
     private readonly LibraryCatalog catalog = new();
-    private readonly TextBox search = new() { Width = 260, PlaceholderText = "Type a track name…" };
+    private readonly TextBox search = new() { Width = 210, PlaceholderText = "Type a track name…" };
+    private readonly ComboBox searchMode = new() { Width=125, DropDownStyle=ComboBoxStyle.DropDownList };
+    private readonly System.Windows.Forms.Timer searchTimer = new() { Interval=650 };
+    private string? sunoQuery;
     private readonly Button pauseScan = new() { Text = "Pause scan", AutoSize = true, Height = 34, Enabled = false };
     private Button clearScan = null!;
     private ScanControl? scanControl;
@@ -50,14 +56,23 @@ public sealed class MainForm : Form
 
     public MainForm()
     {
+        browser.AudioSettings = audioSettings;
         player = new(browser);
+        eqTimer.Tick += async (_, _) => { if (updatingEq || playerBusy) return; eqTimer.Stop(); if (player.Track == null) return; updatingEq=true; try { await browser.ApplyEqualizerAsync(); } catch(Exception ex) { SetStatus("Equalizer: " + ex.Message); } finally { updatingEq=false; } };
+        Disposed += (_, _) => { eqTimer.Dispose(); searchTimer.Dispose(); };
+        searchTimer.Tick += (_, _) => {
+            if(closeRequested || clearing || playerBusy) {searchTimer.Stop();return;}
+            if(operation is {IsCompleted:false}) return;
+            searchTimer.Stop();
+            if(browser.Site.Id=="suno" && searchMode.SelectedIndex==0) Work(token=>Scan(token,true));
+        };
         artwork = new(() => { if (!IsDisposed) {grid.Invalidate(); cards?.Invalidate();} });
         cards = new(url=>artwork.Get(url)) {Dock=DockStyle.Fill,Visible=false};
         cards.Play=track=>_ = PlayTrackAsync(track); cards.Prompt=ShowPrompt; cards.FocusTrack=track=>focusedTrack=track;
         cards.SelectionChanged=()=>{UpdateCount();grid.Invalidate();}; cards.CanChangeSelection=CanChangeList;
         Disposed += (_, _) => artwork.Dispose();
         player.Changed += RefreshPlayer;
-        Text = "AssetRaider 0.3.9 — Udio + Suno WAV Recorder";
+        Text = "AssetRaider 0.3.10 — Udio + Suno WAV Recorder";
         MinimumSize = new Size(960, 880); Size = new Size(1280, 1080);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10);
@@ -70,13 +85,22 @@ public sealed class MainForm : Form
         layout.RowStyles.Add(new(SizeType.Absolute, 46));
         layout.RowStyles.Add(new(SizeType.Percent, 100));
         layout.RowStyles.Add(new(SizeType.Absolute, 110));
-        layout.RowStyles.Add(new(SizeType.Absolute, 74));
+        layout.RowStyles.Add(new(SizeType.Absolute, 196));
         layout.RowStyles.Add(new(SizeType.Absolute, 46));
         layout.RowStyles.Add(new(SizeType.Absolute, 52));
         layout.RowStyles.Add(new(SizeType.Absolute, 48));
         layout.RowStyles.Add(new(SizeType.Absolute, 10));
         layout.RowStyles.Add(new(SizeType.Absolute, 50));
         Controls.Add(layout);
+        layout.SizeChanged += (_, _) => {
+            var compact = layout.ClientSize.Height < 980;
+            layout.SuspendLayout(); layout.Padding = new Padding(compact ? 12 : 20);
+            layout.RowStyles[0].Height = compact ? 80 : 92;
+            for(var row=1;row<=3;row++) layout.RowStyles[row].Height = compact ? 42 : 46;
+            layout.RowStyles[5].Height = compact ? 96 : 110;
+            layout.RowStyles[6].Height = compact ? 160 : 196;
+            layout.RowStyles[11].Height = compact ? 36 : 50; layout.ResumeLayout();
+        };
         var header = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Padding = new Padding(12, 8, 12, 8), BackColor = Color.FromArgb(24, 31, 25), Margin = new Padding(0, 0, 0, 12) };
         header.ColumnStyles.Add(new(SizeType.Absolute, 68)); header.ColumnStyles.Add(new(SizeType.Percent, 100));
         header.RowCount = 1; header.RowStyles.Add(new(SizeType.Percent, 100));
@@ -112,10 +136,13 @@ public sealed class MainForm : Form
         scanBar.Controls.Add(MakeButton("Select none", () => SelectTracks(false)));
         layout.Controls.Add(scanBar, 0, 2);
         var searchBar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
-        searchBar.Controls.Add(new Label { Text = "Track name", AutoSize = true, Margin = new Padding(0, 7, 8, 0) });
-        search.TextChanged += (_, _) => RefreshTracks(); searchBar.Controls.Add(search);
+        searchMode.Items.AddRange(["Track name", "Tag / genre"]); searchMode.SelectedIndex=0; searchBar.Controls.Add(searchMode);
+        void SearchChanged() { RefreshTracks(); searchTimer.Stop(); if(searchMode.SelectedIndex==0 && browser.Site.Id=="suno" && !closeRequested) {if(scanControl!=null) cancellation?.Cancel(); searchTimer.Start();} }
+        search.TextChanged += (_, _) => SearchChanged();
+        searchMode.SelectedIndexChanged += (_, _) => { search.PlaceholderText=searchMode.SelectedIndex==0?"Type a track name…":"Search scanned tags / genres…"; SearchChanged(); };
+        searchBar.Controls.Add(search);
         searchBar.Controls.Add(MakeButton("Find in library", () => Work(token => Scan(token, true))));
-        search.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; Work(token => Scan(token, true)); } };
+        search.KeyDown += (_, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; searchTimer.Stop(); Work(token => Scan(token, true)); } };
         count.AutoSize = true; count.Margin = new Padding(12, 7, 0, 0); searchBar.Controls.Add(count);
         layout.Controls.Add(searchBar, 0, 3);
         var destination = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4 };
@@ -150,7 +177,7 @@ public sealed class MainForm : Form
             ToolTipText = "Encoding reported by Chrome for this song. ~kbps is an approximate stream average. Unknown means unavailable; WAV output settings are separate." });
         grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = nameof(Track.Status), HeaderText = "Status", Width=140, ReadOnly = true });
         grid.Columns.Insert(2, new DataGridViewTextBoxColumn { Name = "Artwork", HeaderText = "", Width = 56, ReadOnly = true, SortMode = DataGridViewColumnSortMode.NotSortable });
-        foreach(var (property,label,width) in new[] {(nameof(Track.CreatedDate),"Created",165),(nameof(Track.ReleaseDate),"Released",165),(nameof(Track.SunoVersion),"Suno version",120),(nameof(Track.Prompt),"Full prompt (double-click)",360)})
+        foreach(var (property,label,width) in new[] {(nameof(Track.CreatedDate),"Created",165),(nameof(Track.ReleaseDate),"Released",165),(nameof(Track.SunoVersion),"Suno version",120),(nameof(Track.Tags),"Tags / genres",260),(nameof(Track.Prompt),"Full prompt (double-click)",360)})
             grid.Columns.Add(new DataGridViewTextBoxColumn {DataPropertyName=property,HeaderText=label,Width=width,ReadOnly=true,SortMode=DataGridViewColumnSortMode.NotSortable});
         grid.ClipboardCopyMode=DataGridViewClipboardCopyMode.EnableWithoutHeaderText;
         grid.CellDoubleClick+=(_,e)=>{if(e.RowIndex>=0 && e.ColumnIndex>=0 && grid.Columns[e.ColumnIndex].DataPropertyName==nameof(Track.Prompt) && grid.Rows[e.RowIndex].DataBoundItem is Track track) ShowPrompt(track);};
@@ -210,7 +237,13 @@ public sealed class MainForm : Form
         playbackSeek.MouseUp += (_, _) => { seekingPlayer = false; _ = PlayerActionAsync(() => player.SeekAsync(playbackSeek.Value / 1000d * (player.State?.Duration ?? 0))); };
         playbackSeek.KeyUp += (_, _) => _ = PlayerActionAsync(() => player.SeekAsync(playbackSeek.Value / 1000d * (player.State?.Duration ?? 0)));
         playerBar.Controls.Add(playbackSeek, 0, 2); playerBar.Controls.Add(playbackTime, 1, 2);
-        layout.Controls.Add(playerBar, 0, 5); layout.Controls.Add(new SpectrumView { Dock = DockStyle.Fill }, 0, 6);
+        layout.Controls.Add(playerBar, 0, 5);
+        var audioPanel = new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=2,RowCount=1,Margin=Padding.Empty};
+        audioPanel.ColumnStyles.Add(new(SizeType.Percent,50)); audioPanel.ColumnStyles.Add(new(SizeType.Percent,50));
+        void SaveAudio() { try { audioSettings.Save(); } catch(Exception ex) { SetStatus("Could not save audio settings: " + ex.Message); } }
+        audioPanel.Controls.Add(new SpectrumView(audioSettings, SaveAudio) { Dock=DockStyle.Fill,Margin=new Padding(0,0,4,0) },0,0);
+        audioPanel.Controls.Add(new EqualizerView(audioSettings, () => {SaveAudio(); eqTimer.Stop(); eqTimer.Start();}),1,0);
+        layout.Controls.Add(audioPanel,0,6);
         playerTimer.Tick += async (_, _) => await PollPlayerAsync(); playerTimer.Start();
         var actions = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(0, 7, 0, 0) };
         var record = MakeButton("Record selected as WAV", () => Work(token => Record(token, false)));
@@ -221,13 +254,13 @@ public sealed class MainForm : Form
         actions.Controls.Add(stop);
         actions.Controls.Add(new Label { Text = "48 kHz · 16-bit stereo WAV", AutoSize = true, ForeColor = Color.FromArgb(80, 99, 67), Margin = new Padding(8, 10, 0, 0), Font = new Font("Segoe UI", 9) });
         layout.Controls.Add(actions, 0, 8);
-        status.Dock = DockStyle.Fill; status.AutoEllipsis = true; status.Text = "Sign in once, then Open library / filters and Scan library. Type a name to filter scanned tracks; Find in library searches Suno directly.";
+        status.Dock = DockStyle.Fill; status.AutoEllipsis = true; status.Text = "Sign in once, then Open library / filters and Scan library. Choose Track name or Tag / genre. Suno name searches update after typing using Suno’s web form.";
         layout.Controls.Add(status, 0, 9);
         progress.Dock = DockStyle.Fill; layout.Controls.Add(progress, 0, 10);
         log.Dock = DockStyle.Fill; log.Multiline = true; log.ReadOnly = true; log.ScrollBars = ScrollBars.Vertical;
         log.BackColor = Color.FromArgb(233, 239, 227); log.ForeColor = Color.FromArgb(64, 77, 56); log.Font = new Font("Consolas", 9); log.BorderStyle = BorderStyle.None; layout.Controls.Add(log, 0, 11);
         var tips = new ToolTip(); tips.SetToolTip(record, "Record visible selected tracks. Output: 48 kHz / 16-bit stereo WAV, about 11 MB per minute. Source quality is unchanged.");
-        tips.SetToolTip(search, "Filter scanned tracks by name. Find in library searches Suno directly. Select all applies to visible matches.");
+        tips.SetToolTip(search, "Choose Track name or Tag / genre. Suno name searches update after typing; Find in library connects and searches. Tags search scanned style metadata.");
         Disposed += (_, _) => tips.Dispose();
         foreach (var bar in layout.Controls.OfType<FlowLayoutPanel>()) bar.Margin = Padding.Empty;
         UpdateCount();
@@ -271,7 +304,7 @@ public sealed class MainForm : Form
     private void RefreshTracks()
     {
         grid.EndEdit(); tracks.RaiseListChangedEvents = false;
-        tracks.Clear(); foreach (var track in catalog.Matching(search.Text, sort, sortDescending)) tracks.Add(track);
+        tracks.Clear(); foreach (var track in catalog.Matching(browser.Site.Id=="suno" && searchMode.SelectedIndex==0 && sunoQuery==search.Text.Trim() ? "" : search.Text, sort, sortDescending, searchMode.SelectedIndex==1)) tracks.Add(track);
         tracks.RaiseListChangedEvents = true; tracks.ResetBindings(); UpdateCount();
         player.Playlist.Update(tracks); RefreshPlayer();
         cards.SetTracks(tracks.ToArray());
@@ -380,14 +413,17 @@ public sealed class MainForm : Form
     }
     private async Task Scan(CancellationToken token, bool find = false)
     {
+        searchTimer.Stop();
         scanControl = new(); pauseScan.Enabled = true; clearScan.Enabled = true; search.Enabled = true;
         scanControl.Paused = () => SetStatus("Scan paused. Resume scan continues from here. Clear scanned list starts over; change site filters between scans.");
-        catalog.Clear(); RefreshTracks();
-        var query = find ? search.Text.Trim() : null;
-        SetStatus(find && browser.Site.Id == "suno" ? "Searching Suno's library for the entered name…" : "Scanning the current filtered library. Search names as tracks arrive; Pause scan keeps your position.");
+        catalog.Clear();
+        var query = find ? (searchMode.SelectedIndex==0 ? search.Text.Trim() : "") : null;
+        sunoQuery = browser.Site.Id=="suno" && searchMode.SelectedIndex==0 ? query : null;
+        RefreshTracks();
+        SetStatus(find && browser.Site.Id == "suno" ? searchMode.SelectedIndex==0 ? "Searching Suno’s web form; keeping every returned match…" : "Scanning Suno’s library for matching tags / genres…" : "Scanning the current filtered library. Search names as tracks arrive; Pause scan keeps your position.");
         var result = await browser.ScanAsync(fresh => {
             foreach (var track in fresh) catalog.Add(track);
-            RefreshTracks(); status.Text = $"Scanning… {catalog.Count} tracks found, {tracks.Count} match the name filter";
+            RefreshTracks(); status.Text = $"Scanning… {catalog.Count} tracks found, {tracks.Count} match the filter";
         }, scanControl, token, query);
         SetStatus(result);
     }
@@ -428,6 +464,13 @@ public sealed class MainForm : Form
         SortTracks(TrackSort.Length); if (tracks[0].Title != "Night Drive" || !tracks[0].Selected) throw new Exception("Reverse sort lost selection.");
         SortTracks(TrackSort.Status); if (tracks[0].Title != "Sunrise") throw new Exception("Header status sort failed.");
         SortTracks(TrackSort.Song); if (tracks[0].Title != "Night Drive") throw new Exception("Header song sort failed.");
+        tracks[0].Tags="synthwave, electronic";
+        searchMode.SelectedIndex=1; search.Text="synthwave";
+        if(tracks.Count!=1 || tracks[0].Title!="Night Drive") throw new Exception("Tag search did not use style metadata.");
+        searchMode.SelectedIndex=0; search.Text="night";
+        browser.SelectSiteAsync(MusicSite.Suno).GetAwaiter().GetResult(); sunoQuery="night"; RefreshTracks();
+        if(tracks.Count!=2) throw new Exception("Suno results with unrelated titles were hidden.");
+        sunoQuery=null; browser.SelectSiteAsync(MusicSite.Udio).GetAwaiter().GetResult(); search.Text=""; RefreshTracks();
         var portrait=ArtworkPaint.Fit(new Size(100,200),new Rectangle(0,0,128,128));
         if(portrait.Width!=64||portrait.Height!=128) throw new Exception("Portrait cover was stretched.");
         tracks[0].CreatedAt="2026-10-01T09:10:00Z"; tracks[0].SunoVersion="V5.5"; tracks[0].Prompt="Style prompt:\nFull style text\n\nLyrics / generation prompt:\nLine one\nLine two";
@@ -435,6 +478,12 @@ public sealed class MainForm : Form
         if(!tracks[0].Selected||viewPicker.SelectedIndex!=1) throw new Exception("Grid/size change lost selection.");
         viewPicker.SelectedIndex=0; artworkSize.SelectedIndex=1;
         Size = MinimumSize; Show(); Application.DoEvents();
+        var audioHost = Controls.OfType<TableLayoutPanel>().Single().GetControlFromPosition(0,6)!;
+        var equalizer = audioHost.Controls.OfType<EqualizerView>().Single();
+        if (Math.Abs(audioHost.Controls[0].Width - equalizer.Width)>2 || equalizer.Controls.OfType<TrackBar>().Count()!=9) throw new Exception("Audio panels are not equal width / eight bands missing.");
+        foreach(var slider in equalizer.Controls.OfType<TrackBar>()) if(slider.Height<60 || slider.Width<25 || slider.Bottom>equalizer.Height) throw new Exception("Equalizer slider clipped.");
+        var visualizer = audioHost.Controls.OfType<SpectrumView>().Single();
+        var previousStyle=audioSettings.Style; foreach(var style in AudioPreferences.Styles) {audioSettings.Style=style;using var render=new Bitmap(visualizer.Width,visualizer.Height);visualizer.DrawToBitmap(render,new Rectangle(Point.Empty,render.Size));} audioSettings.Style=previousStyle;
         Directory.CreateDirectory(directory);
         using var bitmap = new Bitmap(Width, Height); DrawToBitmap(bitmap, new Rectangle(Point.Empty, Size));
         bitmap.Save(Path.Combine(directory, "app.png"));
@@ -458,7 +507,7 @@ public sealed class MainForm : Form
         playerTimer.Stop();
         cancellation?.Cancel();
         if (operation != null) await operation;
-        while (playerBusy || pollingPlayer) await Task.Delay(50);
+        while (playerBusy || pollingPlayer || updatingEq) await Task.Delay(50);
         await player.StopAsync(); playerTimer.Dispose();
         await browser.DisposeAsync();
         closing = true; Close();

@@ -46,6 +46,7 @@ async ({ site = 'udio', id, preview = false } = {}) => {
   };
   window.__assetRaiderDesktop = {
     stop: restore,
+    audio: () => player,
     start: async () => {
       if (!active || !player) throw new Error('The prepared player was lost.');
       if (error) throw new Error(error);

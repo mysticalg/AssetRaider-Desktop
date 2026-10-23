@@ -1,4 +1,4 @@
-# AssetRaider desktop — Udio + Suno player and WAV recorder (0.3.9)
+# AssetRaider desktop — Udio + Suno player and WAV recorder (0.3.10)
 
 ## Music player
 
@@ -56,7 +56,7 @@ With the .NET 10 SDK installed:
 
 ```powershell
 ./scripts/build-desktop.ps1
-$check = Start-Process ./output/desktop-0.3.9/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
+$check = Start-Process ./output/desktop-0.3.10/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
 Get-Content C:\Temp\AssetRaiderTest\self-test.json
 ```
 
