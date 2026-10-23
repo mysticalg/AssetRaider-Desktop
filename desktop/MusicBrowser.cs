@@ -179,8 +179,8 @@ public sealed class MusicBrowser : IAsyncDisposable, IRecordingBrowser
         await StateAsync().WaitAsync(cancellation);
         return duration;
     }
-    public AudioPreferences AudioSettings { get; set; } = new();
-    public Task ApplyEqualizerAsync() => page is { IsClosed: false } ? page.EvaluateAsync(Script("equalizer"), new { gains = AudioSettings.Gains, enabled = AudioSettings.Enabled, gainDb = AudioSettings.GainDb }) : Task.CompletedTask;
+    public AudioPreferences? AudioSettings { get; set; }
+    public Task ApplyEqualizerAsync() => AudioSettings is { } settings && page is { IsClosed: false } ? page.EvaluateAsync(Script("equalizer"), new { gains = settings.Gains, enabled = settings.Enabled, gainDb = settings.GainDb }) : Task.CompletedTask;
     public Task StartAsync() => Page.EvaluateAsync("() => window.__assetRaiderDesktop.start()");
     public Task PausePlaybackAsync() => Page.EvaluateAsync("() => window.__assetRaiderDesktop.pause()");
     public Task SeekPlaybackAsync(double seconds) => Page.EvaluateAsync("seconds => window.__assetRaiderDesktop.seek(seconds)", seconds);
