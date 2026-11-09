@@ -131,6 +131,30 @@ describe("desktop Udio playback controller", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
 
+  it.each(["0", "1"])("uses Suno's labelled song action beside a cover overlay with opacity %s", async opacity => {
+    const song = document.querySelector("button")!;
+    song.innerHTML = '<span class="song-label" style="display:none">Play</span>';
+    const cover = document.createElement("button"); cover.setAttribute("aria-label", "Play");
+    cover.style.opacity = opacity;
+    vi.spyOn(cover, "getClientRects").mockReturnValue({ length: 1 } as DOMRectList);
+    const coverClick = vi.fn(); cover.onclick = coverClick;
+    song.before(cover);
+    expect(await prepare({ site: "suno", preview: true })).toBe(120);
+    await api().start();
+    expect(coverClick).not.toHaveBeenCalled();
+    expect(api().state().Source).toBe("blob:song");
+    expect(play).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects multiple labelled Suno song actions instead of choosing the first", async () => {
+    const song = document.querySelector("button")!; song.textContent = "Play";
+    const duplicate = song.cloneNode(true) as HTMLButtonElement;
+    vi.spyOn(duplicate, "getClientRects").mockReturnValue({ length: 1 } as DOMRectList);
+    document.body.append(duplicate);
+    await expect(prepare({ site: "suno" })).rejects.toThrow("uniquely");
+    expect(play).not.toHaveBeenCalled();
+  });
+
   it("finds the replacement Play button after hydration without toggling Pause", async () => {
     document.querySelector("button")!.onclick = null;
     const pending = prepare({ site: "suno" });

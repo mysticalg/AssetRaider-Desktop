@@ -72,7 +72,7 @@ public sealed class MainForm : Form
         cards.SelectionChanged=()=>{UpdateCount();grid.Invalidate();}; cards.CanChangeSelection=CanChangeList;
         Disposed += (_, _) => artwork.Dispose();
         player.Changed += RefreshPlayer;
-        Text = "AssetRaider 0.3.10 — Udio + Suno WAV Recorder";
+        Text = "AssetRaider 0.3.11 — Udio + Suno WAV Recorder";
         MinimumSize = new Size(960, 880); Size = new Size(1280, 1080);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10);

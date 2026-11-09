@@ -1,4 +1,8 @@
-# AssetRaider desktop — Udio + Suno player and WAV recorder (0.3.10)
+# AssetRaider desktop — Udio + Suno player and WAV recorder (0.3.11)
+
+Version 0.3.11 fixes Suno playback preparation when both the cover overlay and
+the main song action expose a Play button. The labelled song action is selected
+while genuine ambiguity still stops playback safely.
 
 ## Music player
 
@@ -56,7 +60,7 @@ With the .NET 10 SDK installed:
 
 ```powershell
 ./scripts/build-desktop.ps1
-$check = Start-Process ./output/desktop-0.3.10/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
+$check = Start-Process ./output/desktop-0.3.11/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
 Get-Content C:\Temp\AssetRaiderTest\self-test.json
 ```
 

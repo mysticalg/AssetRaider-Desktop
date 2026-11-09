@@ -1,4 +1,17 @@
-# AssetRaider 0.3.10 — Windows beta
+# AssetRaider 0.3.11 — Windows beta
+
+Suno playback now selects the labelled song Play action when its cover overlay
+also exposes a Play button. This fixes preparation rejecting the current song
+page as ambiguous, including narrow windows and hovered cover artwork. Genuine
+ambiguity still fails safely; Udio selection and recording protections are unchanged.
+
+Validation: all 25 playback/library tests passed. Live signed-in Suno checks
+verified audible playback with the default EQ, pause/resume, seek, completion
+and replay, plus audible five-second recording samples from two songs. Full
+recording queues and live Udio playback were not revalidated. Settings, Chrome
+profiles and existing recordings are preserved.
+
+## Included from 0.3.10
 
 - Eight-band playback EQ (63 Hz–8 kHz), ±12 dB band sliders and a separate ±12 dB Gain slider. Bypass and Flat reset are included. Boosts raise the level directly; reduce Gain if audio distorts.
 - Responsive side-by-side equalizer and live audio visualizer. Right-click for Spectrum, Neon wave, Mirror, Orbit or Fire, and 15/24/30/45/60/90/120 FPS targets. Default: 60 FPS.

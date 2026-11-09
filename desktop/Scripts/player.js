@@ -2,7 +2,15 @@ async ({ site = 'udio', id, preview = false } = {}) => {
   window.__assetRaiderDesktop?.stop();
   const siteName = site === 'suno' ? 'Suno' : 'Udio';
   if (id && location.pathname.replace(/\/$/, '') !== (site === 'suno' ? '/song/' : '/songs/') + id) throw new Error('The page is not the selected song. Load the library and retry.');
-  const playButtons = () => [...document.querySelectorAll(site === 'suno' ? 'button[aria-label="Play"]' : 'main button[aria-label="Play"]')].filter(b => b.getClientRects().length);
+  const playButtons = () => {
+    const candidates = [...document.querySelectorAll(site === 'suno' ? 'button[aria-label="Play"]' : 'main button[aria-label="Play"]')].filter(b => b.getClientRects().length);
+    // Suno's cover overlay also has aria-label="Play" and a layout box even
+    // while transparent. Prefer the song action with its explicit Play label.
+    // Read textContent so the same action works when its label is visually
+    // hidden on narrow windows. Keep uniqueness checks for genuine ambiguity.
+    const songActions = site === 'suno' ? candidates.filter(b => b.textContent.trim() === 'Play') : [];
+    return songActions.length ? songActions : candidates;
+  };
   const buttons = playButtons();
   if (buttons.length !== 1) throw new Error(`The song Play button was not found uniquely. Sign into ${siteName} in the app browser, then retry.`);
   const proto = HTMLMediaElement.prototype;
