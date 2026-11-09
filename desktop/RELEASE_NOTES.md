@@ -1,4 +1,17 @@
-# AssetRaider 0.3.11 — Windows beta
+# AssetRaider 0.3.12 — Windows beta
+
+Individual track checkboxes now work while a library scan is running or paused.
+Select all and Select none are available during scans too. Selected tracks stay
+selected as scan results refresh; recording still locks the selection and queue.
+Track metadata remains read-only. The Suno Play-button repair from 0.3.11 is included.
+
+Validation: real checkbox clicks selected and deselected tracks in paused scans,
+selected a track in an active scan, and verified Select all / Select none. A
+recording-state click could not alter selection. Native UI checks cover editable
+checkboxes, metadata protection, scan refreshes, filtering/sorting and recording
+locks. All 25 playback/library script tests and installer extraction checks pass.
+
+## Included from 0.3.11
 
 Suno playback now selects the labelled song Play action when its cover overlay
 also exposes a Play button. This fixes preparation rejecting the current song

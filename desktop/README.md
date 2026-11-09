@@ -1,4 +1,8 @@
-# AssetRaider desktop — Udio + Suno player and WAV recorder (0.3.11)
+# AssetRaider desktop — Udio + Suno player and WAV recorder (0.3.12)
+
+Version 0.3.12 enables individual recording-selection checkboxes and Select all /
+Select none during active and paused library scans. Selection survives scan
+refreshes. Recording keeps the queue selection locked.
 
 Version 0.3.11 fixes Suno playback preparation when both the cover overlay and
 the main song action expose a Play button. The labelled song action is selected
@@ -60,7 +64,7 @@ With the .NET 10 SDK installed:
 
 ```powershell
 ./scripts/build-desktop.ps1
-$check = Start-Process ./output/desktop-0.3.11/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
+$check = Start-Process ./output/desktop-0.3.12/AssetRaider.exe -ArgumentList '--self-test', 'C:\Temp\AssetRaiderTest' -Wait -PassThru
 Get-Content C:\Temp\AssetRaiderTest\self-test.json
 ```
 

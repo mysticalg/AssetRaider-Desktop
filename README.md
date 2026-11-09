@@ -4,7 +4,7 @@
 
 ![AssetRaider music library artwork](docs/assets/music-library-hero.png)
 
-[Download website](https://mysticalg.github.io/AssetRaider-Desktop/) · [Mac/Linux downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.4.9-beta.1) · [Windows downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.11-beta.1) · [Report a problem](https://github.com/mysticalg/AssetRaider-Desktop/issues)
+[Download website](https://mysticalg.github.io/AssetRaider-Desktop/) · [Mac/Linux downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.4.9-beta.1) · [Windows downloads](https://github.com/mysticalg/AssetRaider-Desktop/releases/tag/v0.3.12-beta.1) · [Report a problem](https://github.com/mysticalg/AssetRaider-Desktop/issues)
 
 ## macOS and Linux — 0.4.9 beta
 
@@ -14,12 +14,12 @@
 
 See the [Mac/Linux installation and build guide](crossplatform/README.md). Keep the computer awake while recording. No separate .NET runtime is required.
 
-## Windows — 0.3.11 beta
+## Windows — 0.3.12 beta
 
 Requires **Windows 11 x64 and Google Chrome**. The .NET runtime is included.
 
-- **Installer:** download `AssetRaider-0.3.11-Setup.exe` from Releases, run it, then open AssetRaider from the Start menu. Installs for your Windows account without administrator access.
-- **Portable:** download `AssetRaider-0.3.11-Windows-x64.zip`, extract the entire ZIP and run `AssetRaider.exe`. Keep all extracted files together, including `.playwright`.
+- **Installer:** download `AssetRaider-0.3.12-Setup.exe` from Releases, run it, then open AssetRaider from the Start menu. Installs for your Windows account without administrator access.
+- **Portable:** download `AssetRaider-0.3.12-Windows-x64.zip`, extract the entire ZIP and run `AssetRaider.exe`. Keep all extracted files together, including `.playwright`.
 
 This is an **unsigned public beta**. Windows may display an unknown-publisher warning. Review the source or build it yourself if you prefer. SHA-256 checksums accompany each release.
 
@@ -49,6 +49,8 @@ These WAVs contain playback audio. They are not original studio masters or nativ
 
 ## Beta status
 
+Version 0.3.12 fixes individual track checkboxes during active and paused library scans. Select all and Select none are also available while scanning. Selected tracks survive scan refreshes, and recording keeps selection locked. The 0.3.11 Suno playback repair is included.
+
 Version 0.3.11 fixes Suno playback when both the cover overlay and the main song action expose a Play button. Live Suno checks verified audible preview with EQ, pause/resume, seeking, completion, replay and recording samples from two songs. Existing settings, sign-ins and recordings are preserved. See [Windows release notes](desktop/RELEASE_NOTES.md).
 
 Version 0.3.10 added a responsive eight-band playback EQ with a manual ±12 dB gain slider, five visualizer styles, selectable target frame rates (60 FPS by default), and automatic audio setting persistence. Search offers a tag/genre filter and debounced Suno web-form name searches, preserving all results Suno returns even when the titles differ. WAV recordings retain the source audio.
@@ -73,7 +75,7 @@ Use Windows, the .NET 10 SDK, and Node.js 24 for JavaScript tests:
 npm ci
 npm test
 ./scripts/build-release.ps1
-$check = Start-Process ./output/releases/AssetRaider-0.3.11-Setup.exe -ArgumentList '--verify-install', 'C:\Temp\assetraider-installer.json' -Wait -PassThru
+$check = Start-Process ./output/releases/AssetRaider-0.3.12-Setup.exe -ArgumentList '--verify-install', 'C:\Temp\assetraider-installer.json' -Wait -PassThru
 Get-Content C:\Temp\assetraider-installer.json
 ```
 

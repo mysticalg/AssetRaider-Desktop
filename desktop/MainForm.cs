@@ -38,6 +38,7 @@ public sealed class MainForm : Form
     private string? sunoQuery;
     private readonly Button pauseScan = new() { Text = "Pause scan", AutoSize = true, Height = 34, Enabled = false };
     private Button clearScan = null!;
+    private Button selectAll = null!, selectNone = null!;
     private ScanControl? scanControl;
     private bool clearing;
     private readonly DataGridView grid = new();
@@ -72,7 +73,7 @@ public sealed class MainForm : Form
         cards.SelectionChanged=()=>{UpdateCount();grid.Invalidate();}; cards.CanChangeSelection=CanChangeList;
         Disposed += (_, _) => artwork.Dispose();
         player.Changed += RefreshPlayer;
-        Text = "AssetRaider 0.3.11 — Udio + Suno WAV Recorder";
+        Text = "AssetRaider 0.3.12 — Udio + Suno WAV Recorder";
         MinimumSize = new Size(960, 880); Size = new Size(1280, 1080);
         StartPosition = FormStartPosition.CenterScreen;
         Font = new Font("Segoe UI", 10);
@@ -132,8 +133,8 @@ public sealed class MainForm : Form
         scanBar.Controls.Add(MakeButton("Scan library", () => Work(token => Scan(token))));
         StyleButton(pauseScan); pauseScan.Click += (_, _) => TogglePause(); scanBar.Controls.Add(pauseScan);
         clearScan = MakeButton("Clear scanned list", async () => await ClearScanAsync()); idleButtons.Remove(clearScan); scanBar.Controls.Add(clearScan);
-        scanBar.Controls.Add(MakeButton("Select all", () => SelectTracks(true)));
-        scanBar.Controls.Add(MakeButton("Select none", () => SelectTracks(false)));
+        scanBar.Controls.Add(selectAll = MakeButton("Select all", () => SelectTracks(true)));
+        scanBar.Controls.Add(selectNone = MakeButton("Select none", () => SelectTracks(false)));
         layout.Controls.Add(scanBar, 0, 2);
         var searchBar = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false };
         searchMode.Items.AddRange(["Track name", "Tag / genre"]); searchMode.SelectedIndex=0; searchBar.Controls.Add(searchMode);
@@ -204,6 +205,7 @@ public sealed class MainForm : Form
         grid.RowTemplate.MinimumHeight = 50;
         grid.DataSource = tracks;
         grid.CurrentCellDirtyStateChanged += (_, _) => { if (grid.IsCurrentCellDirty) grid.CommitEdit(DataGridViewDataErrorContexts.Commit); };
+        grid.CellBeginEdit += (_, e) => { if (!CanChangeList()) e.Cancel = true; };
         grid.CellValueChanged += (_, _) => UpdateCount();
         grid.CellContentClick += (_, e) => {
             if (e.RowIndex >= 0 && e.ColumnIndex == 1 && !playerBusy && grid.Rows[e.RowIndex].DataBoundItem is Track track)
@@ -326,9 +328,24 @@ public sealed class MainForm : Form
             catalog.Clear(); RefreshTracks(); progress.Value = 0;
             SetStatus("Scanned list cleared. Saved WAVs are untouched. Choose filters, then Scan library or Find in library to start again.");
         }
-        finally { clearing = false; clearScan.Enabled = true; }
+        finally { clearing = false; clearScan.Enabled = true; SetListSelectionEnabled(CanChangeList()); }
     }
-    private void SelectTracks(bool selected) { grid.EndEdit(); foreach (var track in tracks) track.Selected = selected; tracks.ResetBindings(); UpdateCount(); }
+    private void SelectTracks(bool selected) { if (!CanChangeList()) return; grid.EndEdit(); foreach (var track in tracks) track.Selected = selected; tracks.ResetBindings(); UpdateCount(); }
+    private void SetListSelectionEnabled(bool enabled)
+    {
+        grid.EndEdit();
+        grid.ReadOnly = !enabled;
+        foreach (DataGridViewColumn column in grid.Columns) column.ReadOnly = column.Index != 0;
+        selectAll.Enabled = selectNone.Enabled = enabled;
+    }
+    private ScanControl BeginScan()
+    {
+        scanControl = new(); pauseScan.Enabled = true; clearScan.Enabled = true; search.Enabled = true;
+        // Scanning adds metadata; it does not own the recording selection. Keep
+        // native checkbox editing consistent with the header and card controls.
+        SetListSelectionEnabled(true);
+        return scanControl;
+    }
     private void SetStatus(string text) { status.Text = text; log.AppendText($"{DateTime.Now:HH:mm:ss}  {text}{Environment.NewLine}"); }
 
     private void Work(Func<CancellationToken, Task> action)
@@ -341,7 +358,7 @@ public sealed class MainForm : Form
         while (pollingPlayer) await Task.Delay(25);
         cancellation = new(); clearScan.Enabled = false; search.Enabled = false;
         foreach (var button in idleButtons) button.Enabled = false;
-        sitePicker.Enabled = false; folder.Enabled = false; grid.ReadOnly = true; stop.Enabled = true; progress.Value = 0;
+        sitePicker.Enabled = false; folder.Enabled = false; SetListSelectionEnabled(false); stop.Enabled = true; progress.Value = 0;
         RefreshPlayer();
         try { await player.StopAsync(); await action(cancellation.Token); }
         catch (OperationCanceledException) { SetStatus(scanControl != null ? "Scan stopped. Tracks found are kept; Scan library starts a fresh scan." : "Stopped. Completed WAVs are saved; select remaining songs and record to resume."); }
@@ -349,10 +366,10 @@ public sealed class MainForm : Form
         finally
         {
             scanControl = null; pauseScan.Enabled = false; pauseScan.Text = "Pause scan"; clearScan.Enabled = !clearing && !playerBusy; search.Enabled = true;
-            stop.Enabled = false; grid.ReadOnly = false; folder.Enabled = true;
+            stop.Enabled = false; folder.Enabled = true;
             sitePicker.SelectedIndex = browser.Site.Id == "suno" ? 1 : 0; sitePicker.Enabled = !playerBusy;
-            foreach (DataGridViewColumn column in grid.Columns) column.ReadOnly = column.Index != 0;
             foreach (var button in idleButtons) button.Enabled = !playerBusy;
+            SetListSelectionEnabled(!closeRequested && !clearing && !playerBusy);
             cancellation.Dispose(); cancellation = null;
             RefreshPlayer();
         }
@@ -366,7 +383,7 @@ public sealed class MainForm : Form
     {
         if (closeRequested || playerBusy || clearing || (operation is { IsCompleted: false } && (requestedTrack == null || scanControl == null))) return;
         playerBusy = true; foreach (var button in idleButtons) button.Enabled = false;
-        sitePicker.Enabled = false; clearScan.Enabled = false; RefreshPlayer();
+        sitePicker.Enabled = false; clearScan.Enabled = false; SetListSelectionEnabled(false); RefreshPlayer();
         try {
             if (operation is { IsCompleted: false }) {
                 requestedTrack!.PlaybackAction = "Buffering…";
@@ -381,7 +398,7 @@ public sealed class MainForm : Form
         catch (Exception ex) { await player.StopAsync(); SetStatus("Music player: " + ex.Message); }
         finally {
             if (requestedTrack != null && player.Track?.Key != requestedTrack.Key) requestedTrack.PlaybackAction = "Play";
-            playerBusy = false; foreach (var button in idleButtons) button.Enabled = true; sitePicker.Enabled = true; clearScan.Enabled = true; RefreshPlayer();
+            playerBusy = false; foreach (var button in idleButtons) button.Enabled = true; sitePicker.Enabled = true; clearScan.Enabled = true; SetListSelectionEnabled(CanChangeList()); RefreshPlayer();
         }
     }
     private async Task PollPlayerAsync()
@@ -414,8 +431,8 @@ public sealed class MainForm : Form
     private async Task Scan(CancellationToken token, bool find = false)
     {
         searchTimer.Stop();
-        scanControl = new(); pauseScan.Enabled = true; clearScan.Enabled = true; search.Enabled = true;
-        scanControl.Paused = () => SetStatus("Scan paused. Resume scan continues from here. Clear scanned list starts over; change site filters between scans.");
+        var control = BeginScan();
+        control.Paused = () => SetStatus("Scan paused. Resume scan continues from here. Clear scanned list starts over; change site filters between scans.");
         catalog.Clear();
         var query = find ? (searchMode.SelectedIndex==0 ? search.Text.Trim() : "") : null;
         sunoQuery = browser.Site.Id=="suno" && searchMode.SelectedIndex==0 ? query : null;
@@ -424,7 +441,7 @@ public sealed class MainForm : Form
         var result = await browser.ScanAsync(fresh => {
             foreach (var track in fresh) catalog.Add(track);
             RefreshTracks(); status.Text = $"Scanning… {catalog.Count} tracks found, {tracks.Count} match the filter";
-        }, scanControl, token, query);
+        }, control, token, query);
         SetStatus(result);
     }
     private async Task Record(CancellationToken token, bool recordAgain)
@@ -478,6 +495,7 @@ public sealed class MainForm : Form
         if(!tracks[0].Selected||viewPicker.SelectedIndex!=1) throw new Exception("Grid/size change lost selection.");
         viewPicker.SelectedIndex=0; artworkSize.SelectedIndex=1;
         Size = MinimumSize; Show(); Application.DoEvents();
+        CheckSelectionEditing();
         var audioHost = Controls.OfType<TableLayoutPanel>().Single().GetControlFromPosition(0,6)!;
         var equalizer = audioHost.Controls.OfType<EqualizerView>().Single();
         if (Math.Abs(audioHost.Controls[0].Width - equalizer.Width)>2 || equalizer.Controls.OfType<TrackBar>().Count()!=9) throw new Exception("Audio panels are not equal width / eight bands missing.");
@@ -495,8 +513,40 @@ public sealed class MainForm : Form
             foreach (Control child in bar.Controls)
                 if (child.Right > bar.ClientSize.Width || child.Bottom > bar.ClientSize.Height)
                     throw new Exception($"Control clipped at minimum size: {child.Text}");
-        File.WriteAllText(Path.Combine(directory, "ui-check.json"), "{\"Passed\":true,\"Checks\":\"Header selection, filtered selection, song/duration/status sorting, selection preservation and minimum-size controls\"}");
+        File.WriteAllText(Path.Combine(directory, "ui-check.json"), "{\"Passed\":true,\"Checks\":\"Native checkbox edit availability during active/paused scans, recording lock, batch selection, header selection, filtered selection, song/duration/status sorting, selection preservation and minimum-size controls\"}");
         closing = true; Close();
+    }
+    private void CheckSelectionEditing()
+    {
+        var original = tracks.Select(t => t.Selected).ToArray();
+        var pending = new TaskCompletionSource(); operation = pending.Task;
+        try {
+            SetListSelectionEnabled(false); BeginScan();
+            void RequireEditable() {
+                grid.CurrentCell = grid.Rows[0].Cells[0];
+                if (grid.ReadOnly || grid.CurrentCell.ReadOnly || !grid.BeginEdit(false)) throw new Exception("Scan blocked native checkbox editing.");
+                grid.EndEdit();
+                if (!selectAll.Enabled || !selectNone.Enabled || grid.Columns.Cast<DataGridViewColumn>().Skip(1).Any(c => !c.ReadOnly)) throw new Exception("Scan selection controls or metadata edit protection incorrect.");
+            }
+            RequireEditable(); SelectTracks(true);
+            if (tracks.Any(t => !t.Selected)) throw new Exception("Active-scan batch selection failed.");
+            scanControl!.Pause(); RequireEditable(); SelectTracks(false);
+            if (tracks.Any(t => t.Selected)) throw new Exception("Paused-scan batch deselection failed.");
+            SelectTracks(true); RefreshTracks();
+            if (tracks.Any(t => !t.Selected)) throw new Exception("Scan refresh lost selections.");
+            scanControl = null; SetListSelectionEnabled(false);
+            if (!grid.Rows[0].Cells[0].ReadOnly || grid.BeginEdit(false) || selectAll.Enabled || selectNone.Enabled) throw new Exception("Recording did not lock selection.");
+            SelectTracks(false);
+            if (tracks.Any(t => !t.Selected)) throw new Exception("Recording batch action changed the queue selection.");
+        }
+        finally {
+            operation = null; scanControl = null; pauseScan.Enabled = false;
+            SetListSelectionEnabled(true);
+            for (var i=0;i<tracks.Count;i++) tracks[i].Selected=original[i];
+            UpdateCount();
+        }
+        PlayerActionAsync(() => Task.CompletedTask).GetAwaiter().GetResult();
+        if (grid.ReadOnly || !selectAll.Enabled || !selectNone.Enabled) throw new Exception("Player action did not restore selection controls.");
     }
     private async void OnClosing(object? sender, FormClosingEventArgs e)
     {
